@@ -1,0 +1,182 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+{% load staticfiles %}
+<div class="row">
+	<div class="col-sm-8">
+		<h2>Tutorial</h2>
+		<h3>General</h3>
+			<div>
+				<p>The BALSAM platform can be used for supervised feature extraction and visualization of Multi Capillary Column - Ion Mobility Spectrometry (MCC-IMS) data using a graphical user interface.</p>
+
+				<p>The features or peak-intensities are then used to build a prediction model. Using the same feature extraction methods unknown measurements can be classified in the final step. In this automated or guided approach we provide a range of preprocessing and evaluation methods to select from.
+
+				Furthermore we provide a set of example datasets to showcase the implementation.</p>
+			</div>
+	</div>
+	<div class="col-sm-4">
+		<h4>Screencast</h4>
+		<div class="embed-responsive embed-responsive-16by9">
+			<iframe width="560" height="315" src="https://www.youtube.com/embed/wqvogzOyNDE" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+		</div>
+	</div>
+	<div class="col-sm-12">
+		<h3>FAQ</h3>
+		<div>
+			<h4>Question: Where can I download my data?</h4>
+			<h4>Answer: You can list all of your analysis runs under `/results`. When following one of the links to `analysis_details` you can find a button to "Download all plots as zip". Check "Download Info" to download your feature matrices from training and prediction. Raw data cannot be downloaded.</h4>
+
+			<h4>Question: When are my samples deleted?</h4>
+			<h4>Answer: They are automatically deleted after 30 days. If you can't or don't want to upload your data to our webserver, you can deploy balsam on your own machine using our public docker container at <a href="https://hub.docker.com/repository/docker/philmaweb/balsam_docker" target="_blank">DockerHub</a>.</h4>
+
+			<h4>Question: The decision tree doesn't classify the samples correctly. It has leave nodes that have several classes. How can I fix this?</h4>
+			<h4>Answer: Increase the allowed depth limit of the decision tree (set max_depth >5). Make sure that min_samples_leaf = 1.</h4>
+		</div>
+		<h3>Step-by-Step Guide</h3>
+		<div>
+			This is the step-by-step guide how to use BALSAM. It will guide you through the different route options.
+
+			<div class="d-flex justify-content-center tutorial_image_holder">
+				<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/run.png" alt="Select Analysis route" class="col-sm-8">
+			</div>
+
+			Decide between the <span class="badge badge-success "><strong>Automatic</strong></span>, <span class="badge badge-info "><strong>Custom</strong></span> and <span class="badge badge-secondary "><strong>Existing Results</strong></span> routes.
+			The first two approaches <span class="badge badge-success "><strong>Automatic</strong></span> and <span class="badge badge-info "><strong>Custom</strong></span> will produce the same outcome:
+			A prediction model based on the preprocessing strategy and the features (detected peaks) resulting from this strategy.
+			The third approach <span class="badge badge-secondary "><strong>Existing Results</strong></span> allows one to upload a feature matrix as input or re-use results from a previous run. This also allows the analysis of GC-MS measurements by performing the preprocessing and peak detection locally and using the platform to select and reduce features and build predictive models using cross-validation.
+		</div>
+		<br>
+
+		<h2><span class="badge badge-success "><strong>Automatic Route</strong></span>
+		</h2>
+		<div class="col-sm-12">
+
+			<h4>Datasets</h4>
+				<p>Select between the available datasets or upload your own zip-archive. When uploading your own dataset make sure to follow the requirements docuemted under <a href="{% url 'documentation' %}#datasets" target="_blank">Datasets</a>.</p>
+				<p>Select the <span class="badge">Large Candy Train</span> dataset - which is a dataset with 33 raw MCC-IMS measurements from 2 classes - menthol and citrus candies.
+					Then press Submit</p>
+			<h4>Review</h4>
+			<p>Click on the <span class="badge">Dataset Info heading</span> to collapse or expand the sections.
+				Under <span class="badge">Evaluation Info</span> you can find the parameters used for the evaluation of you method.
+			</p>
+			<p>The automatic approach will evaluate a set of PeakDetection options for you and select the best performing strategy on the dataset based on the classifier performance (ROC AUC).</p>
+			<p>The server will run all available Peak-Detection methods and Evaluation Options for you when clicking continue.</p>
+
+				<div class="d-flex justify-content-center tutorial_image_holder">
+					<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_review.png" alt="Review Parameters" class="col-sm-8">
+				</div>
+			<h4>Progress</h4>
+			<p>You will be redirected to the progress indicator while all evaluations are made and the plots are generated. Depending on the utilization of the server the runtime might vary significantly. You should be automatically redirected to the next page.
+			</p>
+				<div class="d-flex justify-content-center tutorial_image_holder">
+					<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/progress.png" alt="progress indicator" class="col-sm-4">
+				</div>
+			<h4>Prediction</h4>
+			<p>
+			Here the prediction model based on the best performing peak detection method is available.
+			</p>
+			<div class="d-flex justify-content-center tutorial_image_holder">
+				<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_prediction_model.png" alt="Best Prediction Model" class="col-sm-8">
+			</div>
+			<p>
+				Below we can find the results of the evaluation:
+			</p>
+			<p>
+				An interactive table holding raw and corrected p_values for each of the detected peaks.
+				In the first column the evaluation method is stated, while the second indicated the
+				peak detection method. Class comparison notes the classes for which the p_value is computed. In the end we have the PeakId and it's coordinates.
+			</p>
+			<div class="d-flex justify-content-center tutorial_image_holder">
+				<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_prediction_features_fdr.png" alt="Features FDR" class="col-sm-8">
+			</div>
+				<p>
+					Scrolling further down, this table holds the feature weights and details from the Random Forest Classification.
+				</p>
+			<div class="d-flex justify-content-center tutorial_image_holder">
+				<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_prediction_features.png" alt="Features Random Forest" class="col-sm-8">
+			</div>
+			<p>
+				Scrolling further down we can see the estimated performance of the classifier, with Accuracy, Precision, Recall Area under Curve and F1-Score.
+				<div class="d-flex justify-content-center tutorial_image_holder">
+					<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_prediction_performance.png" alt="Estimated Performance Cross Validation" class="col-sm-8">
+				</div>
+			</p>
+			<p>
+				Below this table we can find a set of plots. Each plot is tagged, which we can use to filter the displayed ones.
+				When clicking on the plot the card expands to fit most of the screen, minimizing the plots works by clicking it again.
+				<div class="d-flex justify-content-center tutorial_image_holder">
+					<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_filter_plots.png" alt="Filter Plots by Tag" class="col-sm-8">
+				</div>
+			</p>
+			<p>
+				Scrolling further we can see the Receiver operating curve plot for the <strong>TOPHAT</strong> method,
+				which we used to estimate the models performance in the cross validation step.
+				The final model is build using the full dataset - while we use the cross validation splits to estimate it's performance.
+
+				<div class="d-flex justify-content-center tutorial_image_holder">
+					<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/roc.png" alt="ROC Plot" class="col-sm-8">
+				</div>
+
+			</p>
+
+			<p>
+				Next to this we can see the boxplots of the normalized intensities of the most
+				informative peaks. Even further down we are presented with a decision tree for
+				each evaluation method composed of nodes and arrows.
+				In the title of each node a condition is given.
+				Following the arrows below describes the decision boundary of the tree.
+				If a peaks normalized intensity is below the shown threshold we follow the yes-arrow.
+				We continue this process, and once we reach a node that does not have any more arrow
+				pointing on, a so called leaf node, we have the final decision for our measurement.
+
+			</p>
+			<p>
+				Lastly we can see the feature matrix of the peak intensities used in the training process.
+				The columns hold the Peak ids, while the rows indicate the measurement. As most other
+				datatabels we can easily search and download the contents.
+			</p>
+			<p>Scrolling to the top of the page one can select the prediciton model built in the training phase
+				to predict the labels of other raw MCC-IMS measurements. Select the matching Large Candy test dataset
+				and start the prediction process by clicking Submit. This dataset contains measurements not used in the
+				training process and will therefore be a test for the robustness of our model.</p>
+			<h4>Prediction Results</h4>
+			<p>After applying the same peak detection methods as in the training, the peak detection results
+				are fed into our classifier which predicts the label. On the next page we can compare these predicted labels
+				with the original ones. These are available as we prepared the zip archive accordingly, but not required,
+				e.g. if the labels of your samples are unknown.</p>
+
+		</div>
+
+		<h2><span class="badge badge-info "><strong>Custom Route</strong></span>
+		</h2>
+		<div class="col-sm-12">
+
+				<p>Similarly to the automatic approach, but one can select between default parameters or adjust them to your preference.</p>
+				<p>After applying the preprocessing steps to your dataset you can further customize the evaluation of
+					the prediction model, specifying the folds in the cross validation and whether to compute p_values
+					for each feature or to use a random forest classifier to extract feature importances.</p>
+				<p>See the <a href="{% url 'documentation' %}#preprocessing_techniques" target="_blank">Preprocessing Techniques</a>
+					or refer to the publication for a detailed explanation of the available methods.</p>
+		</div>
+		<h2><span class="badge badge-secondary"><strong>Existing Results Route</strong></span>
+		</h2>
+		<div class="col-sm-12">
+			<p>This approach follows the same routine as the automatic route.
+				Training of a prediction model and evaluation of it, and finally the option to use the built
+				classifier to predict labels.
+			</p>
+			<p>The major difference of this approach is, that one can use previous results or a feature matrix
+				(see <a href="{% url 'documentation' %}#feature_matrix">documentation#feature_matrix</a> for reference)
+				as input to the analysis. This allows a much more rapid analysis process by skipping the computationaly
+				expensive pre-processing steps.</p>
+		</div>
+
+		<h3>Results</h3>
+
+			<p>All of your analysis runs are listed under <a href="{% url 'results' %}">results</a> -
+				click on the the Details link to find the plots, data and prediction results associated with your analysis.
+				Furthermore you're able to download the results from here.</p>
+	</div>
+</div>
+
+{% endblock %}

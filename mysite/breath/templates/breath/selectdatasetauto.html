@@ -1,0 +1,33 @@
+{% extends 'breath/base.html' %}
+
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">
+        <span class="badge badge-info">1</span>
+        Select Dataset</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">2</span>
+        Review</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">3</span>
+        Prediction</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">4</span>
+        Prediction Results</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+    <h2>Select a Dataset or Upload your own</h2>
+    {% if not_valid == "Yes" %}<h1>Not Valid Form</h1>{% endif %}
+
+    {% load crispy_forms_tags %}
+    <div class="row justify-content-center">
+        {% crispy form form.helper %}
+    </div>
+    <!--<a href="selectparameters" >Next</a>-->
+{% endblock %}

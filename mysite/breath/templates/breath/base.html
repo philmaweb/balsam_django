@@ -1,0 +1,177 @@
+<!doctype html>
+{% load staticfiles %}
+<html lang="en">
+    <head>
+        <title>Breath Analysis</title>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Bootstrap css -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+        <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+        <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+        <script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.15.0/umd/popper.min.js" ></script>
+        <script type="text/javascript" charset="utf8" src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+        <!--Get sortable tables rendering -->
+        <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+        <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap4.min.js"></script>
+
+        <!-- get export optios for datatables -->
+        <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/dataTables.buttons.min.js"></script>
+        <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.flash.min.js"></script>
+        <script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+        <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.html5.min.js"></script>
+
+        <!-- datatables and export button styling -->
+        <!-- either bootstrap or jquery styling, but not both -->
+<!--        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.18/css/jquery.dataTables.bootstrap4.min.css">-->
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.6/css/buttons.dataTables.min.css" />
+
+        <!-- Get Glyphocons from fontawesome-->
+        <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+
+        {% load static %}
+        <!-- Own custom style -->
+        <link rel="stylesheet" type="text/css" href="/balsam/static/breath/style.css" />
+        <!--Icons-->
+        <link rel="shortcut icon" type="image/png" href="/balsam/static/breath/favicon.ico" />
+        <link rel="icon" type="image/png" href="/balsam/static/breath/favicon-32x32.png" />
+        <link rel="icon" type="image/png" href="/balsam/static/breath/favicon-16x16.png" />
+
+        <!--   cookies consent   -->
+        <script type="text/javascript" src="/balsam/static/cookie_consent/cookiebar.js"></script>
+        {% load cookie_consent_tags %}
+        {% load custom_cookie_tags %}
+
+        <!--  Custom script for card expansion -->
+        <script>
+            function expand_scroll_to(id) {
+                console.log(id);
+                $(id).toggleClass("col-sm-4 col-sm-12");
+                $("html, body").animate({ scrollTop: $(id).offset().top -100 }, 500);
+                return;
+            }
+        </script>
+    </head><body>
+
+        <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+            <a class="navbar-brand" href="{% url 'index' %}">BALSAM</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+                <ul class="navbar-nav mr-auto">
+
+                    <li class="nav-item {% if active_page == 'home' %} active {% endif %}">
+                        <a class="nav-link" href="{% url 'index' %}">Home <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page == 'run' %}active{% endif %}" href="{% url 'run' %}">Run</a>
+                    </li>
+                    <li class="nav-item {% if active_page == 'results' %}active{% endif %}">
+                        <a class="nav-link" href="{% url 'results' %}">Results</a>
+                    </li>
+                    <li class="nav-item dropdown {% if active_page == 'documentation' %}active{% endif %}">
+                        <a class="nav-link dropdown-toggle" href="{% url 'documentation' %}" id="dropdown01" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Documentation</a>
+                        <div class="dropdown-menu" aria-labelledby="dropdown01">
+                            <a class="dropdown-item" href="{% url 'documentation' %}#general">General</a>
+                            <a class="dropdown-item" href="{% url 'documentation' %}#file_formats">File formats</a>
+                            <a class="dropdown-item" href="{% url 'documentation' %}#preprocessing_techniques">Preprocessing / Denoising Method</a>
+                            <a class="dropdown-item" href="{% url 'documentation' %}#peak_detection">Peak Detection</a>
+                            <a class="dropdown-item" href="{% url 'documentation' %}#peak_alignment">Peak Alignment</a>
+                        </div>
+                    </li>
+                    <li class="nav-item {% if active_page == 'help' %}active{% endif %}">
+                        <a class="nav-link" href="{% url 'help' %}">Help</a>
+                    </li>
+                    <li class="nav-item {% if active_page == 'about' %}active{% endif %}">
+                        <a class="nav-link" href="{% url 'about' %}">About</a>
+                    </li>
+                    {% if user.is_authenticated or is_temp %}
+                        <li class="nav-item dropdown active">
+                            <a class="nav-link dropdown-toggle" id="dropdown02" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {%if is_temp%}
+                                    Temporary User
+                                {% else %}
+                                    User: {{ user.get_username }}
+                                {% endif %}
+                                </a>
+                            <div class="dropdown-menu" aria-labelledby="dropdown02">
+                                {%if is_temp%}
+                                    <a class="dropdown-item" href="{% url 'signup'%}?next={{request.path}}">Sign up</a>
+                                {% endif %}
+                                <a class="dropdown-item" href="{% url 'lazy_logout'%}">Logout</a>
+                            </div>
+                        </li>
+                    {% else %}
+                        <li class="nav-item active">
+                            {# <a class="nav-link" href="{% url 'login'%}?next={{request.path}}">Login</a> #}
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+
+        {% not_accepted_or_declined_cookie_groups request as cookie_groups %}
+        <script type="text/javascript">
+
+        {% if request.session|isfirstvisit %}
+            console.log("First visit - show cookie bar");
+
+            {% url "cookie_consent_cookie_group_list" as url_cookies %}
+            {% cookie_consent_accept_url cookie_groups as url_accept %}
+            {% cookie_consent_decline_url cookie_groups as url_decline %}
+            // nothing to consent - as no opt-out cookies used - show bar
+            var cookie_groups = [];
+
+          {% for cookie_group in cookie_groups %}
+            cookie_groups.push("{{ cookie_group.varname }}");
+          {% endfor %}
+
+          $(document).ready(function() {
+            $.showCookieBar({
+              content: "{% filter escapejs %}{% with cookie_groups=cookie_groups|join:", " %}
+                <div class="cookie-bar">This site uses {{ cookie_groups }} cookies to enable our service. No third party cookies are saved.
+                <a href="{{ url_accept }}" class="cc-cookie-accept">Confirm</a> <a href="{{ url_cookies }}">Cookie Policy</a></div>{% endwith %}{% endfilter %}",
+              cookie_groups: cookie_groups,
+              cookie_decline: "{% get_decline_cookie_groups_cookie_string request cookie_groups %}",
+              beforeDeclined: function() {
+                document.cookie = "{% get_decline_cookie_groups_cookie_string request cookie_groups %}";
+              }
+            });
+          });
+        {% endif %}
+        </script>
+
+        <main role="main">
+            <!-- Main jumbotron for a primary message -->
+            <div class="jumbotron">
+
+                <div class="container maincontainer">
+                    {% block breadcrumb %}
+                    {% endblock %}
+
+                    {% block content %}
+                    {% endblock %}
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+              <span class="text-muted">BALSAM Webserver - Version: May 2020 - </span>
+            <span class="text-muted"><a href="{% url 'cookie_consent' %}">Cookie Policy</a></span>
+            </div>
+        </footer>
+
+
+    </body>
+
+</html>

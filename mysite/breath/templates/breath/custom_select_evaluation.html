@@ -1,0 +1,29 @@
+{% extends 'breath/base.html' %}
+
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">1</span>
+        Upload Peak Detection Data</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-info active">2</span>
+        Choose Evaluation Parameters</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">3</span>
+        Evaluation / Prediction</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">4</span>
+        Prediction Results</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <h2>Select Evaluation Parameters</h2>
+    {% load crispy_forms_tags %}
+    {% crispy analysis_form analysis_form.helper %}
+
+{% endblock %}
+

@@ -1,0 +1,39 @@
+{% extends 'breath/base.html' %}
+
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">1</span>
+        Select Dataset</li>
+    <li class="breadcrumb-item  active" aria-current="page">
+        <span class="badge badge-info">2</span>
+        Preprocessing</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">3</span>
+        Review</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">4</span>
+        Evaluation</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">5</span>
+        Prediction</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">6</span>
+        Prediction Results</li>
+  </ol>
+</nav>
+{% endblock %}
+
+
+{% block content %}
+    <h2>Select Preprocessing Options</h2>
+    {% if not_valid == "Yes" %}<h1>Not Valid Form</h1>{% endif %}
+
+    {% load crispy_forms_tags %}
+
+    {% crispy processing_form processing_form.helper %}
+
+    <!--<a href="review" >Next</a>-->
+{% endblock %}

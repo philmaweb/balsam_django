@@ -1,0 +1,63 @@
+<h1>Feature matrices - Training</h1>
+
+{% for t_matrix in trainings_matrices %}
+
+    {% if t_matrix.display_feature_matrix %}
+        <h2 class="bold">Feature Matrix {{forloop.counter}}: Peak-Intensities {{ t_matrix.peak_detection_method_name }}</h2>
+        <table id="table_trainings_matrix_{{forloop.counter}}" class="display table table-bordered table-hover table-striped">
+        </table>
+
+    {% else %}
+        <h2 class="bold">Feature Matrix {{forloop.counter}}: Peak-Intensities {{ t_matrix.peak_detection_method_name }}</h2>
+        <div>Too large to display.</div>
+        <div>Download <a href="{% url 'get_trainings_matrix_as_csv' fm_id=t_matrix.pk %}">here</a>.</div>
+    {% endif %}
+
+{% endfor %}
+
+
+<script type="text/javascript" language="javascript" class="init">
+
+{% for t_matrix in trainings_matrices %}
+
+    {% if t_matrix.display_feature_matrix %}
+
+    function getData_{{forloop.counter}}(cb_func) {
+        $.ajax({
+          url: "{% url 'get_trainings_matrix_as_json' fm_id=t_matrix.pk %}",
+          success: cb_func
+        });
+    }
+
+    $(document).ready(function() {
+      getData_{{forloop.counter}}(function( data ) {
+
+        // need to rearrange column names to match syntax "data":"col_name"
+        var columns = [];
+        data2 = data.data;
+        columnNames = data.columns;
+        for (var i in columnNames) {
+          columns.push({data: i, title: columnNames[i]});
+        }
+        $('#table_trainings_matrix_{{forloop.counter}}').DataTable( {
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', {extend: 'csv', title: 'train_{{r_trainings_matrix.peak_detection_method_name}}_feature_matrix'},
+                 {extend: 'excel', title: 'train_{{r_trainings_matrix.peak_detection_method_name}}_feature_matrix'}
+            ],
+            processing: false,
+            data: data.data,
+            columns: columns,
+            deferRender: true,
+            scrollX: true
+        } );
+      });
+
+    } );
+
+    {% endif %}
+
+{% endfor %}
+
+
+</script>

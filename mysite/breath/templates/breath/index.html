@@ -1,0 +1,33 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+    <h1 class="display-3">BALSAM</h1>
+    <div class="row">
+        <div class="col-sm-8">
+
+            <h2>Welcome on our platform for supervised feature extraction and visualization of Multi Capillary Column - Ion Mobility Spectrometry (MCC-IMS) data.</h2>
+            <h2>We now also support retention time based GC-MS and LC-MS data (experimental).</h2>
+            <h3>Here for the first time? Checkout the <a href="{% url 'help' %}">Tutorial</a> or visit the <a href="{% url 'documentation' %}">Documentation</a>!</h3>
+            <!--<div>To get started, watch our screencasts or read through the tutorials.</div>-->
+            <div>
+                <a class="btn btn-primary btn-lg" href="{% url 'documentation' %}" role="button">Learn more »</a>
+                <a class="btn btn-secondary btn-lg" href="{% url 'run' %}" role="button">Create Analysis</a>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <h4>Screencast</h4>
+            <div class="embed-responsive embed-responsive-16by9">
+                <iframe width="560" height="315" src="https://www.youtube.com/embed/wqvogzOyNDE" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        </div>
+        <div class="col-sm-12">
+
+            <div class="d-flex justify-content-center" style="padding:25px">
+                <img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/figure_01_white_bg.png" alt="not found" data-toggle="modal" class="col-sm-8">
+            </div>
+        </div>
+    </div>
+
+
+
+{% endblock %}

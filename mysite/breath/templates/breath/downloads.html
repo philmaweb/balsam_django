@@ -1,0 +1,79 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+    <h2>Downloads</h2>
+        {% if analysis_ids %}
+
+        <div id="accordion">
+        {% for analysis_id, prediction_results in prediction_results_list %}
+            <div class="card">
+                <div class="card-header" id="heading_{{forloop.counter}}">
+                      <h5 class="mb-0">
+                            <button class="btn btn-link collapsed {% if forloop.counter == 1 %}show{%endif%}" data-toggle="collapse" data-target="#collapse_{{forloop.counter}}" aria-expanded="false" aria-controls="collapse_{{forloop.counter}}">
+                              Analysis {{ analysis_id }}
+                            </button>
+                      </h5>
+                </div>
+                <div id="collapse_{{forloop.counter}}" class="collapse" aria-labelledby="heading_{{forloop.counter}}" data-parent="#accordion">
+                    <div class="card-body">
+                        <!--Pickle Download-->
+                        <div><a href="{% url 'predictor_pickle_download' analysis_id %}" class="btn btn-info btn-lg">
+                        <span class="fa fa-download"></span>
+                        Predictor pickle</a></div>
+                        <!--DATATABLES-->
+                        <!--DATATABLE PredictionResult-->
+                        {% if prediction_results %}
+                            {% for prediction_result in prediction_results %}
+                            <h3 class="bold">Prediction Result {{ prediction_result.peak_detection_method_name }}</h3>
+                            <table id="table_{{analysis_id}}_{{prediction_result.peak_detection_method_name}}" class="table table-bordered table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Measurement Name</th>
+                                        <th>Predicted Label</th>
+                                        <th>Original Label</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for measurement_name, class_label, orig_label in prediction_result.class_assignment %}
+                                    <tr>
+                                        <td>{{measurement_name}}</td>
+                                        <td>{{class_label}}</td>
+                                        <td>{{orig_label}}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% endfor %}
+                        {% endif %}
+
+                    </div>
+
+                </div>
+            </div>
+
+        {% endfor %}
+        </div>
+
+    {% else %}
+        <h3>No Analysis found. Create one <a href="{% url 'run' %}">here</a>.</h3>
+    {% endif %}
+
+
+<script>
+    $(document).ready(function(){
+        {% for analysis_id, prediction_results in prediction_results_list %}
+            {% if prediction_results %}
+                {% for prediction_result in prediction_results %}
+                $('#table_{{analysis_id}}_{{prediction_result.peak_detection_method_name}}').DataTable( {
+                        dom: 'Bfrtip',
+                        buttons: [
+                            'copy', 'csv', 'excel'
+                        ]
+                    } );
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    } );
+</script>
+
+{% endblock %}

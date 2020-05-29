@@ -1,0 +1,19 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+    <h3 class="display-3">Run</h3>
+    <h2>Select between the automatic, custom and existing results route.</h2>
+    <div>
+        <a class="btn btn-success btn-lg route_button"href="{% url 'selectDatasetAuto' %}" role="button">Automatic</a>
+        <a class="btn btn-info btn-lg route_button" href="{% url 'selectDataset' %}" role="button">Custom</a>
+    </div>
+    <div align="center">
+        <a class="btn btn-secondary btn-lg route_button" href="{% url 'custom_detection_analysis' %}" role="button">Existing Results</a>
+    </div>
+    <br>
+    <div>
+        <p>The <span class="badge badge-success "><strong>Automatic</strong></span> route will only require your input data. No further knowledge or selections need to be made to build your predictor.</p>
+        <p>The <span class="badge badge-info "><strong>Custom</strong></span> route will allow you to customize and select parameters to your preferences, but guides you in your progress towards building your predictor.</p>
+        <p>The <span class="badge badge-secondary "><strong>Existing Results</strong></span> route will allow you to upload results of your custom peak detection, a previous run or use a feature matrix as input.</p>
+    </div>
+{% endblock %}

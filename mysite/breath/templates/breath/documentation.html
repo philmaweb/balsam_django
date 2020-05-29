@@ -1,0 +1,303 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+{% load staticfiles %}
+<div class="row">
+    <div class="col-sm-8">
+        <h1>Documentation</h1>
+
+        <h2 id="general">General</h2>
+
+        <div>
+            This web platform provides a user-interface for analysis of of Multi Capillary Column - Ion Mobility Spectrometry (MCC-IMS) data.
+            In particular, it allows automated supervised feature extraction and class prediction from user supplied measurements and provides visualizations.
+            By applying a selection of pre-processing and peak detection methods it extracts peak-intensities.
+            These features or are then used to build a prediction model, which can be used to assign learned class labels to new measurements.
+
+            The process of creating such a prediction model is available in an automated and guided fashion, either selecting standard model parameters or guiding
+                the user through the selection process of deciding between a range of pre-processing and evaluation methods.
+
+        </div>
+        <div>
+            For your convenience we provide a selection of sample datasets from various backgrounds.
+        </div>
+
+    </div>
+    <div class="col-sm-4">
+        <h4>Screencast</h4>
+        <div class="embed-responsive embed-responsive-16by9">
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/wqvogzOyNDE" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+    </div>
+    <div class="col-sm-8">
+
+        <br>
+        <h2 id="datasets">Datasets</h2>
+
+            <div>You can select between a sample dataset or upload your own zip-archive.
+                When uploading your own dataset make sure to include a <strong>class_labels.tsv</strong> (tab separated values) or <strong>class_labels.csv</strong> (comma separated values) file.
+                The first row should be a header row. Following that we expect the first column to hold the names of the MCC-IMS measurements,
+                while the second column should hold the class labels. When you want to perform Peak-Detection using the VISUALNOWLAYER approach,
+                you need to include the VISUALNOWLAYER in the <strong>.zip</strong>-archive. For more details see <a href=#visualnowlayer>#visualnowlayer</a> and <a href="#visualnowlayer_format">#visualnowlayer_format</a>.</div>
+            <br>
+
+        <h2 id="file_formats">File formats</h2>
+            <div>
+                When uploading your own dataset for training or classification, we expect a <strong>zip</strong>-archive with following requirements:
+                <ul>
+                    <li>MCC/IMS measurements (each filename ending in <strong>'_ims.csv'</strong>)</li>
+                    <li>Class labels referencing the measurements' names in the archive (filename ending in <strong>'class_labels'</strong>)</li>
+                    <li>(optional) A Visualnow-Layer file (filename ending in <strong>'layer'</strong>)</li>
+                </ul>
+
+                <br>
+                When making use of the "Existing Results" route, you are able to upload your own peak detection results or a feature matrix. Right now you are limited to one peak detection method per analysis in this route.
+
+                <ul>
+                    <li>Class labels referencing the measurements' names in the peak detection result / feature matrix (filename ending in <strong>'class_labels'</strong>)</li>
+                    <li>(either) Peak detection results with each filename ending in <strong>'_peak_detection_result.csv'</strong></li>
+                    <li>(or) Feature matrix ending in <strong>'_feature_matrix.csv'</strong></li>
+                </ul>
+                <h3>MCC/IMS measurements</h3>
+                <div>
+                    Make sure to follow the correct MCC/IMS measurement format such as used in <a href="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/BD18_1408280826_ims.csv">sample measurement</a> or described in:
+                    <blockquote class="blockquote">Vautz et al., 2008, <q>Recommendation of a standard format for data sets from GC/IMS with sensor-controlled sampling</q>, International Journal for Ion Mobility Spectrometry</blockquote>
+                    This also means your measurements should be named in accordance with the scheme <strong>"device-serial-number_YYMMDDhhmm_ims.csv"</strong>, eg. BD18_1408280826_ims.csv.
+                </div>
+                <br>
+                <h3>Class labels</h3>
+                <div>
+                    The class labels file should end with the suffix <strong>class_labels.csv</strong>, <strong>class_labels.tsv</strong> or <strong>class_labels.txt</strong>, eg. <strong>candy_class_labels.csv</strong>.
+                    The first row should be a header row in the class labels file. The first column should reference all measurement names in the zip-archive, while the second column assigns the class label such as:
+                    <table id="class_labels" class="table table-bordered table-hover table-striped">
+                        <thead>
+                        <tr>
+                            <td class="bold">Name</td>
+                            <td class="bold">Label</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>BD18_1408280826_ims.csv</td>
+                                <td>menthol</td>
+                            </tr>
+                            <tr>
+                                <td>BD18_1408280834_ims.csv</td>
+                                <td>citrus</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    See example files for <a href="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/class_labels.csv">.csv</a>,
+                    <a href="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/class_labels.tsv">.tsv</a> and
+                    <a href="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/class_labels.txt">.txt</a>.
+                </div>
+                <br>
+                <h3 id="visualnowlayer_format">Visualnow-Layer file format</h3>
+
+                The Visualnowlayer file defines the peak positions to extract intensities from and can be used as a peak detection method.
+                When uploading your own dataset, make sure the file is named with the suffix <strong>"_layer.csv"</strong> or <strong>"_layer.xls"</strong> and it's included in the archive.
+                The annotation file should feature one of the two following schemes:
+
+                <h4>Scheme1</h4>
+                <label class="muted" aria-label="scheme1">(original from VisualNow): Export you peak layer from VisualNow and separately save the "layer" sheet.</label>
+                <table id="scheme1" class="table table-bordered table-hover table-striped">
+                    <thead>
+                    <tr>
+                        <td class="bold">3 Comment lines</td>
+                        <td class="bold"></td>
+                        <td class="bold"></td>
+                        <td class="bold"></td>
+                    </tr>
+                    <tr>
+                        <td class="bold">1/K0</td>
+                        <td class="bold">1/K0 radius</td>
+                        <td class="bold">RT</td>
+                        <td class="bold">RT radius</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>0.3</td>
+                            <td>0.15</td>
+                            <td>25</td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td>...</td>
+                            <td>...</td>
+                            <td>...</td>
+                            <td>...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            See <a href="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/candy_layer.xls">Layer Example 1 (xls)</a> and <a href="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/candy_layer.csv">Layer Example 2 (csv)</a>.
+
+
+            <h4>Scheme2</h4>
+                <label class="muted" aria-label="scheme2">(custom):</label>
+                <table id="scheme2" class="table table-bordered table-hover table-striped">
+                    <thead >
+                    <tr>
+                        <td class="bold">3 Comment lines</td>
+                        <td class="bold"></td>
+                        <td class="bold"></td>
+                        <td class="bold"></td>
+                    </tr>
+                    <tr>
+                        <td class="bold">inverse_reduced_mobility</td>
+                        <td class="bold">radius_inverse_reduced_mobility</td>
+                        <td class="bold">retention_time</td>
+                        <td class="bold">radius_retention_time</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>0.3</td>
+                            <td>0.15</td>
+                            <td>25</td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td>...</td>
+                            <td>...</td>
+                            <td>...</td>
+                            <td>...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div>
+                Make sure to choose utf-8 as encoding scheme when saving your layer to prevent encoding issues.</div>
+
+
+
+                <h3>Peak Detection Results</h3>
+                    Each peak detection result file should end with the suffix <strong>_peak_detection_result.csv</strong>. If the name contains any of the peak detection result names <i>TOPHAT</i>, <i>PEAX</i>, <i>WATERSHED</i>, <i>JIBB</i> or <i>VISUALNOWLAYER</i>, it will be assigned as peak detection method.
+
+                    Rows should hold measurement names. The first line should be the header.
+                    The first column should hold the measurement's name, while the other columns should be as follows:
+
+                    <table id="pdr_scheme1" class="table table-bordered table-hover table-striped">
+                        <thead >
+                        <tr>
+                            <td class="bold">measurement_name</td>
+                            <td class="bold">peak_id</td>
+                            <td class="bold">retention_time</td>
+                            <td class="bold">inverse_reduced_mobility</td>
+                            <td class="bold">intensity</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>BD99_1905190837_ims.csv</td>
+                                <td>1</td>
+                                <td>3.062</td>
+                                <td>0.410</td>
+                                <td>0.005</td>
+                            </tr>
+                            <tr>
+                                <td>BD99_1905190837_ims.csv</td>
+                                <td>2</td>
+                                <td>...</td>
+                                <td>...</td>
+                                <td>...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                <h3 id="feature_matrix">Feature matrix</h3>
+                Each feature matrix file should end with the suffix <strong>_feature_matrix.csv</strong>. If the name contains any of the peak detection result names <i>TOPHAT</i>, <i>PEAX</i>, <i>WATERSHED</i>, <i>JIBB</i> or <i>VISUALNOWLAYER</i>, it will be assigned as peak detection method.
+
+                Rows should hold measurement names. The first line should be the header.
+                The first column should hold the measurement names, while the other columns should be as follows:
+
+                    <table id="fm_scheme1" class="table table-bordered table-hover table-striped">
+                        <thead >
+                        <tr>
+                            <td class="bold">Measurement</td>
+                            <td class="bold">Peak_0067</td>
+                            <td class="bold">Peak_0072</td>
+                            <td class="bold">Peak_0122</td>
+                            <td class="bold">...</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>BD99_1905190837_ims.csv</td>
+                                <td>0.021</td>
+                                <td>0.059</td>
+                                <td>0.086</td>
+                                <td>...</td>
+                            </tr>
+                            <tr>
+                                <td>BD99_1906190842_ims.csv</td>
+                                <td>0.040</td>
+                                <td>0.051</td>
+                                <td>0.000</td>
+                                <td>...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+            </div>
+    <br>
+    <h2 id="preprocessing_techniques">Preprocessing</h2>
+            <div>Preprocessing aims to increase the signal to noise ratio in the samples and improve the accuracy of peak detection methods. It mainly involves compensation for artifacts of the MCC/IMS, normalization and smoothing procedures.</div>
+            <h3>BASELINE_CORRECTION</h3>
+            <div>To correct for the Reactant Ion Peak we apply baseline correction. This method reduces the effect of the RIP-tailing and lowers the baseline of the affected spectra.
+            </div>
+            <h3>INTENSITY_NORMALIZATION</h3>
+            <div>Apply normalization of spectra intensities in reference to the maximum intensity. Leads to intensities between 0 and 1.</div>
+            <h3>CROP_INVERSE_REDUCED_MOBILITY</h3>
+            <div>As practically no peaks occur with inverse reduced ion mobilities < 0.4 Vs/cm^2, we remove the majority of spectra prior to the RIP.</div>
+            <h3>NOISE_SUBTRACTION</h3>
+            <div>To reduce noise we subtract a constant factor from all intensities. To determine the noise level we average the intensities with inverse reduced ion mobility values < 0.4 Vs/cm^2.</div>
+
+            <h3>DISCRETE_WAVELET_TRANSFORMATION </h3>
+            <div>Apply a compression algorithm to the spectra.
+                This algorithm decomposes the signal of the spectra similarly to a Fourier transformation
+                and applies a high and a low pass filter to the spectra.
+                All signals smaller than a cutoff threshold are removed and the signal is reconstructed without the noise. We make use of the Daubechies 8 wavelet and the implementation of PyWavelets.</div>
+            <h3>GAUSSIAN_FILTER</h3>
+            <div>Removes noise by applying a gaussian kernel and merging intensities with neighboring signals. A two dimensional gaussian filter is applied with a fixed kernel size.</div>
+            <h3>MEDIAN_FILTER </h3>
+            <div>Removes noise by replacing intensities with the median of neighboring signals using a fixed window size.</div>
+            <h3>SAVITZKY_GOLAY_FILTER </h3>
+            <div>Removes noise by replacing intensities with a weighted average and a fixed window size.</div>
+    <br>
+    <h2 id="peak_detection">Peak Detection</h2>
+
+            <h3 id="peax">PEAX</h3>
+                <div>PEAX is a non-commercial automated peak extraction method for MCC/IMS measurements. It's core idea is to first extract a lower dimensional peak model from the spectra and merge them info two-dimensional peak models. For more details see <a href="https://doi.org/10.1186/1471-2105-15-25">(2014, D’Addario et. al)</a>.</div>
+<br>
+            <h3 id="visualnowlayer">VISUALNOWLAYER</h3>
+
+            <div>Extract peaks in rectangles based on the positions provided in the layer/annotation file.
+                We support both .xls and .csv format. See <a href="#visualnowlayer_format">#visualnowlayer_format</a> for reference.
+            </div>
+
+<br>
+            <h3 id="tophat">TOPHAT</h3>
+
+                <div>Extracts peaks in a two-step process: First: tophat filtering, second local maxima extraction. In the first step a noise-threshold is applied removing all intensities below this threshold and a mask is created highlighting the areas of high intensities. In the second step the local maxima of each connected component is extracted and saved as intensity value.</div>
+<br>
+            <h3 id="jibb">JIBB</h3>
+                <div>Naive peak extraction approach. Considers an area a peak, if it's intensity is 1.5 times above noise level and 5 consecutive signal points are raising continuously towards the local maxima in inverse reduced mobility direction and 7 consecutive signal points are raising in retention time dimension, while reflecting the inverse behavior when moving away from the maximum.</div>
+<br>
+            <h3 id="watershed">WATERSHED</h3>
+
+                <div>Approach resembling a falling waterlevel that is lowered from maximum intensity value until it reaches the noise level. Local maxima reaching out of the water-level are labeled as peaks. Similarly used in the iPHEx software (2011, Bunkowski).</div>
+    <br>
+        <h2 id="peak_alignment">Peak Alignment</h2>
+        The Peak Alignment Method is applied after Peak Detection to merge peaks close to each other and reduce the number of peaks. We support 2 clustering algorithms: <i>DBSCAN</i> and <i>PROBE_CLUSTERING</i>.
+
+            <h3>DBSCAN</h3>
+                <div>DBSCAN - Density Based Spatial Clustering of Applications with Noise <a href="https://www.aaai.org/Papers/KDD/1996/KDD96-037.pdf">(1996, Ester et. al)</a> is a frequently used clustering algorithm popular for its intuitive density based approach.</div>
+            <h3>PROBE_CLUSTERING</h3>
+                <div>Clustering method to reduce groups of peaks using fixed grid positions. This ensures unique and consistent PeakIds when using the same grid parameters. Especially important for prediction of class labels from raw data.</div>
+
+<!--        <h2 id="plot_types">Plots</h2>-->
+    </div>
+</div> <!-- end row -->
+{% endblock %}

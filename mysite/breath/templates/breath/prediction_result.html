@@ -1,0 +1,151 @@
+{% extends 'breath/base.html' %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">1</span>
+        Select Dataset</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">2</span>
+        Preprocessing</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">3</span>
+        Review</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">4</span>
+        Evaluation</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">5</span>
+        Prediction</li>
+    <li class="breadcrumb-item active" aria-current="page">
+        <span class="badge badge-info">6</span>
+        Prediction Results</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <h2>Prediction Results</h2>
+    <!--<p>Results will be displayed here.</p>-->
+    <div>For a comprehensive list of all details and options to download results visit <a href="{% url 'analysis_details' analysis_id %}">Analysis Details {{analysis_id}}</a>.</div>
+
+
+    {% for prediction_result in prediction_results %}
+    <h2 class="bold">Prediction Model {{ prediction_result.peak_detection_method_name }} </h2>
+    <div class="text-muted">Created at {{ prediction_result.created_at }}</div>
+
+    <table id="table_{{prediction_result.id}}" class="table table-bordered table-hover table-striped">
+        <thead>
+            <tr>
+                <th>Measurement Name</th>
+                <th>Predicted Label</th>
+                <th>Original Label</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for measurement_name, class_label, orig_label in prediction_result.class_assignment %}
+            <tr>
+                <td>{{measurement_name}}</td>
+                <td>{{class_label}}</td>
+                <td>{{orig_label}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+
+
+    <div class="container">
+        <div class="row">
+            <!--Filter Buttons-->
+            <div class="col-sm-12">
+                <p><h3>Filter plots by tag:</h3>
+                    <button type="button" class="btn btn-default btn-xs btn-tag">All</button>
+                    {% for available_tag in available_tags %}
+                    <button type="button" class="btn btn-primary btn-xs btn-tag">{{ available_tag }}</button>
+                    {% endfor %}
+                </p>
+            </div>
+        </div>
+        <div class="row">
+                {% for image in images %}
+                <div class="col-sm-4 card image_card" id="image_{{ forloop.counter }}">
+                  <div class="panel panel-default">
+                    <div class="card-header">
+                      <h3 class="panel-title">{{image.image_title}}</h3>
+                    </div>
+                    <div class="card-body">
+                        <a data-toggle="collapse" href="#collapseCard__{{ forloop.counter }}_text"
+                           aria-controls="collapseCard__{{ forloop.counter }}_text"
+                           aria-expanded="false" role="button" onclick='expand_scroll_to("#image_{{ forloop.counter }}");'
+                        >
+
+                            <img {{ image.src_tag }} alt="not found" data-toggle="modal" class="col-sm-10">
+                        </a>
+                        <div class="collapse" id="collapseCard__{{ forloop.counter }}_text">
+                        {{ image.plot_description}}
+                        </div>
+
+                    </div>
+                    <div class="panel-footer tag card-footer">
+                        <span class="label label-primary hidden">All</span>
+                        {% for tag in image.tags %}
+                            <span class="badge badge-secondary label label-default">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                  </div>
+
+                </div>
+                {% endfor %}
+        </div>
+    </div> <!-- end container -->
+
+
+<!-- Adapted from https://codepen.io/amirulabu/pen/PWWQxK-->
+<!-- Filter images by tag -->
+<script>
+    $(document).ready(function() {
+      $(".btn-tag").click(function(eventObject) {
+        var tag = $(this).html();
+        var totalPanel = document.getElementsByClassName("panel").length;
+        eventObject.preventDefault();
+        for (var x = 1; x <= totalPanel; x++  ){
+          //console.log("json: " + JSON.stringify($("#image_" + x ).html()));
+          if(JSON.stringify($("#image_" + x ).html()).indexOf(tag) >= 0 ){
+            //console.log( JSON.stringify($("#image_" + x ).html()) );
+            $("#image_" + x ).hide();
+            $("#image_" + x ).fadeIn();
+          } else {
+            $("#image_" + x ).hide();
+          };
+          console.log(tag);
+          console.log(JSON.stringify($("#image_" + x ).html()).indexOf(tag));
+        }
+        console.log(tag);
+
+      });
+      console.log("total panel: " + document.getElementsByClassName("panel").length );
+    });
+</script>
+
+<!-- Datatable initialization -->
+
+<script>
+    $(document).ready(function(){
+
+        {% for prediction_result in prediction_results %}
+        $('#table_{{prediction_result.id}}').DataTable( {
+                dom: 'Bfrtip',
+                buttons: [
+                    'copy', 'csv', 'excel'
+                ],
+                "scrollX": true,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+            } );
+        {% endfor %}
+
+    } );
+</script>
+{% endblock %}
+

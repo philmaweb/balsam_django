@@ -1,0 +1,3 @@
+[submodule "mysite/breath/external/breathpy"]
+	path = mysite/breath/external/breathpy
+	url = git@gitlab.com:philmaweb/breathpy.git

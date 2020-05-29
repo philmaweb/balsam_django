@@ -1,0 +1,411 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+    <h2>Details for Analysis {{ analysis_pk }}</h2>
+
+    <!-- Accordion -->
+
+    <div id="accordion">
+
+        <div class="card">
+                <div class="card-header" id="heading_dataset">
+                      <h5 class="mb-0">
+                            <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapse_dataset" aria-expanded="false" aria-controls="collapse_dataset">
+                              Dataset Info
+                            </button>
+                      </h5>
+                </div>
+                <div id="collapse_dataset" class="collapse" aria-labelledby="heading_dataset" data-parent="#accordion">
+                      <div class="card-body">
+                          <table class="table table-bordered table-hover table-striped">
+                            <tr>
+                                <td class="bold">Name of Zip-file</td>
+                                <td>{{ dataset_info.dataset_name}}</td>
+                            </tr>
+                            <tr>
+                                <td class="bold">Number of measurements</td>
+                                <td>{{ dataset_info.number_of_files}}</td>
+                            </tr>
+
+                            {% if dataset_info.peak_layer_filename %}
+                            <tr>
+                                <td class="bold">Visualnow Layer File</td>
+                                <td> {{dataset_info.peak_layer_filename}} </td>
+                            </tr>
+                            {% endif %}
+
+                            <tr>
+                                <td class="bold">Measurements</td>
+                                <td class="bold">Filename</td>
+                                <td class="bold">Label</td>
+                            </tr>
+                            {% for measurement_name, class_label in dataset_info.labeled_measurements %}
+                            <tr>
+                                <td></td>
+                                <td>{{measurement_name}}</td>
+                                <td>{{class_label}}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                      </div>
+                </div>
+        </div>
+        <div class="card">
+                <div class="card-header" id="heading_preprocessing">
+                      <h5 class="mb-0">
+                            <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapse_preprocessing" aria-expanded="false" aria-controls="collapse_preprocessing">
+                              Preprocessing Info
+                            </button>
+                      </h5>
+                </div>
+                <div id="collapse_preprocessing" class="collapse" aria-labelledby="heading_preprocessing" data-parent="#accordion">
+                      <div class="card-body">
+                        <table class="table table-bordered table-hover table-striped">
+                            <tr>
+                                <td class="bold">Peak Detection Method</td>
+                                <td class="bold">Parameters</td>
+                            </tr>
+                            {% for peak_detection_method_name, params in peak_detection_parameters.items %}
+                            <tr>
+                                <td>
+                                    {{ peak_detection_method_name }}
+                                </td>
+                                <td>
+                                    {{params}}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <table class="table table-bordered table-hover table-striped">
+                            <tr>
+                                <td class="bold">Peak Alignment Method</td>
+                                <td class="bold">Parameters</td>
+                            </tr>
+                            {% for peak_alignment_method_name, params in peak_alignment_parameters.items %}
+                            <tr>
+                                <td>
+                                    {{ peak_alignment_method_name }}
+                                </td>
+                                <td>
+                                    {{params}}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <table class="table table-bordered table-hover table-striped">
+                            <tr>
+                                <td class="bold">Denoising Steps</td>
+                                <td class="bold">Parameters</td>
+                            </tr>
+                            {% for denoising_method_name, params in denoising_parameters.items %}
+                            <tr>
+                                <td>
+                                    {{ denoising_method_name }}
+                                </td>
+                                <td>
+                                    {{params}}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <table class="table table-bordered table-hover table-striped">
+                            <tr>
+                                <td class="bold">Normalization Steps</td>
+                                <td class="bold">Parameters</td>
+                            </tr>
+                            {% for normalization_method_name, params in normalization_parameters.items %}
+                            <tr>
+                                <td>
+                                    {{ normalization_method_name }}
+                                </td>
+                                <td>
+                                    {{params}}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                      </div>
+                </div>
+        </div>
+        <div class="card">
+                <div class="card-header" id="heading_evaluation">
+                      <h5 class="mb-0">
+                            <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapse_evaluation" aria-expanded="false" aria-controls="collapse_evaluation">
+                              Evaluation Info
+                            </button>
+                      </h5>
+                </div>
+                <div id="collapse_evaluation" class="collapse" aria-labelledby="heading_evaluation" data-parent="#accordion">
+                      <div class="card-body">
+
+                      {%if evaluation_parameters %}
+
+                        <table class="table table-bordered table-hover table-striped">
+                            <tr>
+                                <td class="bold">Evaluation Method</td>
+                                <td class="bold">Parameters</td>
+                            </tr>
+                            {% for evaluation_method_name, params in evaluation_parameters.items %}
+                            <tr>
+                                <td>
+                                    {{ evaluation_method_name }}
+                                </td>
+                                <td>
+                                    {{params}}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                      {% else %}
+                          <div><bold>No Evaluation-options yet received.</bold></div>
+                      {% endif %}
+                </div>
+        </div>
+        </div>
+        <div class="card">
+                <div class="card-header" id="heading_prediction">
+                      <h5 class="mb-0">
+                            <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapse_prediction" aria-expanded="false" aria-controls="collapse_prediction">
+                              Prediction Info
+                            </button>
+                      </h5>
+                </div>
+                <div id="collapse_prediction" class="collapse" aria-labelledby="heading_prediction" data-parent="#accordion">
+                      <div class="card-body">
+                      {%if prediction_parameters %}
+                          {% for prediction_result in prediction_parameters %}
+                           <h3 class="bold">Prediction Result {{ prediction_result.peak_detection_method_name }}</h3>
+                            <table id="table_{{ prediction_result.peak_detection_method_name }}_{{ forloop.counter }}" class="table table-bordered table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Measurement Name</th>
+                                        <th>Predicted Label</th>
+                                        <th>Original Label</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for measurement_name, class_label, orig_label in prediction_result.class_assignment %}
+                                    <tr>
+                                        <td>{{measurement_name}}</td>
+                                        <td>{{class_label}}</td>
+                                        <td>{{orig_label}}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                          {% endfor %}
+
+                        {% for prediction_result in prediction_results %}
+                            <h2 class="bold">Prediction Model {{ prediction_result.peak_detection_method_name }}</h2>
+                            <table id="table_{{ forloop.counter }}" class="table table-bordered table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Measurement Name</th>
+                                    <th>Predicted Label</th>
+                                    <th>Original Label</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for measurement_name, class_label, orig_label in prediction_result.class_assignment %}
+                                <tr>
+                                    <td>{{measurement_name}}</td>
+                                    <td>{{class_label}}</td>
+                                    <td>{{orig_label}}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            </table>
+                        {% endfor %}
+
+                      {% else %}
+                          <div><bold>No Predictions yet created.</bold></div>
+                      {% endif %}
+                </div>
+        </div>
+        </div>
+        <div class="card">
+                <div class="card-header" id="heading_download">
+                      <h5 class="mb-0">
+                            <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapse_download" aria-expanded="false" aria-controls="collapse_download">
+                              Download Info
+                            </button>
+                      </h5>
+                </div>
+                <div id="collapse_download" class="collapse" aria-labelledby="heading_download" data-parent="#accordion">
+                      <div class="card-body">
+                          <!-- Class labels -->
+                          <h2> Class Labels - Training</h2>
+                          <table id="table_class_labels_download" class="table table-bordered table-hover table-striped">
+                              <thead>
+                                <tr>
+                                    <th>Measurement Name</th>
+                                    <th>Class Label</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                              {% for measurement_name, class_label in dataset_info.labeled_measurements %}
+                                <tr>
+                                    <td>{{measurement_name}}</td>
+                                    <td>{{class_label}}</td>
+                                </tr>
+                              {% endfor %}
+                          </table>
+                            {% if trainings_matrices %}
+                            {% include 'breath/feature_matrix_loop.html' %}
+
+                            <!-- Reduced trainings matrices -->
+                            {% for r_trainings_matrix in dataset_info.reduced_trainings_matrices %}
+                                <h2 class="bold">Reduced Feature Matrix Peak-Intensities {{ r_trainings_matrix.peak_detection_method_name }}: {{r_trainings_matrix.evaluation_method_name}}</h2>
+                                <table id="table_reduced_trainings_matrices_{{r_trainings_matrix.peak_detection_method_name}}_{{r_trainings_matrix.evaluation_method_name}}" class="table table-bordered table-hover table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Measurement</th>
+                                            {% for peak_id in r_trainings_matrix.peak_ids %}
+                                            <th>{{peak_id}}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for measurement_name, row in r_trainings_matrix.feature_rows %}
+                                        <tr>
+                                            <td>{{ measurement_name }}</td>
+                                            {% for ele in row %}
+                                                <td>{{ ele }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% endfor %}
+
+                            {% if prediction_matrices %}
+                            {% include 'breath/prediction_matrix_loop.html' %}
+                            {% endif %}
+
+                          {% else %}
+                              <!-- No trainings matrix found -->
+                              <div><bold>No Peak matrices found.</bold></div>
+                          {% endif %}
+                      </div>
+                </div>
+        </div>
+
+    </div> <!-- end accordion-->
+    <br>
+    <!-- Download all plots button -->
+    <a href="{% url 'get_plots_as_archive' analysis_pk %}"><button type="button" class="btn btn-secondary">Download all plots as zip</button></a>
+
+    <div class="container">
+        <div class="row">
+            <!--Filter Buttons-->
+            <div class="col-sm-12">
+                <p><h3>Filter plots by tag:</h3>
+                    <button type="button" class="btn btn-default btn-xs btn-tag">All</button>
+                    {% for available_tag in available_tags %}
+                    <button type="button" class="btn btn-primary btn-xs btn-tag">{{ available_tag }}</button>
+                    {% endfor %}
+                </p>
+            </div>
+        </div>
+        <div class="row">
+                {% for image in images %}
+                <div class="col-sm-4 card image_card" id="image_{{ forloop.counter }}">
+                  <div class="panel panel-default">
+                    <div class="card-header">
+                      <h3 class="panel-title">{{image.image_title}}</h3>
+                    </div>
+                    <div class="card-body">
+                        <a data-toggle="collapse" href="#collapseCard__{{ forloop.counter }}_text"
+                           aria-controls="collapseCard__{{ forloop.counter }}_text"
+                           aria-expanded="false" role="button" onclick='expand_scroll_to("#image_{{ forloop.counter }}");'
+                        >
+
+                            <img {{ image.src_tag }} alt="not found" data-toggle="modal" class="col-sm-10">
+                        </a>
+                        <div class="collapse" id="collapseCard__{{ forloop.counter }}_text">
+                        {{ image.plot_description}}
+                        </div>
+
+                    </div>
+                    <div class="panel-footer tag card-footer">
+                        <span class="label label-primary hidden">All</span>
+                        {% for tag in image.tags %}
+                            <span class="badge badge-secondary label label-default">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                  </div>
+
+                </div>
+                {% endfor %}
+        </div>
+    </div> <!-- end container -->
+
+
+
+<!-- Adapted from https://codepen.io/amirulabu/pen/PWWQxK-->
+<!-- Filter images by tag -->
+<script>
+    $(document).ready(function() {
+      $(".btn-tag").click(function(eventObject) {
+        var tag = $(this).html();
+        var totalPanel = document.getElementsByClassName("panel").length;
+        eventObject.preventDefault();
+        for (var x = 1; x <= totalPanel; x++  ){
+          //console.log("json: " + JSON.stringify($("#image_" + x ).html()));
+          if(JSON.stringify($("#image_" + x ).html()).indexOf(tag) >= 0 ){
+            //console.log( JSON.stringify($("#image_" + x ).html()) );
+            $("#image_" + x ).hide();
+            $("#image_" + x ).fadeIn();
+          } else {
+            $("#image_" + x ).hide();
+          };
+          console.log(tag);
+          console.log(JSON.stringify($("#image_" + x ).html()).indexOf(tag));
+        }
+        console.log(tag);
+
+      });
+      console.log("total panel: " + document.getElementsByClassName("panel").length );
+    });
+</script>
+
+<!-- Datatable initialization -->
+<script>
+    $(document).ready(function(){
+        {% for prediction_results in prediction_parameters %}
+            {% if prediction_results %}
+                {% for prediction_result in prediction_results %}
+                $('#table_{{ forloop.counter }}').DataTable( {
+                        dom: 'Bfrtip',
+                        buttons: [
+                            'copy', 'csv', 'excel'
+                        ]
+                    } );
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+
+    <!--    Init class labels download    -->
+    $('#table_class_labels_download').DataTable( {
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', {extend: 'csv', title: 'class_labels'}
+        ]
+        } );
+
+    <!-- Init reduced trainings matrices -->
+        {% for r_trainings_matrix in dataset_info.reduced_trainings_matrices %}
+            $('#table_reduced_trainings_matrices_{{r_trainings_matrix.peak_detection_method_name}}_{{r_trainings_matrix.evaluation_method_name}}').DataTable( {
+                dom: 'Bfrtip',
+                buttons: [
+                    'copy', {extend: 'csv', title: 'reduced_train_{{r_trainings_matrix.peak_detection_method_name}}_feature_matrix'},
+                     {extend: 'excel', title: 'reduced_train_{{r_trainings_matrix.peak_detection_method_name}}_feature_matrix'}
+                ],
+                "scrollX": true
+                } );
+        {% endfor %}
+
+    } );
+</script>
+
+{% endblock %}

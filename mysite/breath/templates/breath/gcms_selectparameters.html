@@ -1,0 +1,32 @@
+{% extends 'breath/base.html' %}
+
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">
+        <span class="badge badge-success">1</span>
+        Select Dataset</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">2</span>
+        Evaluation</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">3</span>
+        Prediction</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">4</span>
+        Prediction Results</li>
+  </ol>
+</nav>
+{% endblock %}
+
+
+{% block content %}
+    <h2>Select GCMS Preprocessing Options</h2>
+    {% if not_valid == "Yes" %}<h1>Invalid Form</h1>{% endif %}
+
+    {% load crispy_forms_tags %}
+
+    {% crispy form form.helper %}
+
+{% endblock %}

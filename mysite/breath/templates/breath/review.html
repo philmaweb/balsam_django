@@ -1,0 +1,159 @@
+{% extends 'breath/base.html' %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">1</span>
+        Select Dataset</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-success">2</span>
+        Preprocessing</li>
+    <li class="breadcrumb-item active" aria-current="page">
+        <span class="badge badge-info">3</span>
+        Review</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">4</span>
+        Evaluation</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">5</span>
+        Prediction</li>
+    <li class="breadcrumb-item">
+        <span class="badge badge-secondary">6</span>
+        Prediction Results</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <h2>Review Parameters</h2>
+        <!-- FORM errors -->
+        <div id='form-errors'>{{ form_errors }}</div>
+        {% load crispy_forms_tags %}
+
+   <div class="card">
+       <div class="card-header" id="heading_dataset">
+          <h5 class="mb-0">
+                <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapse_dataset" aria-expanded="false" aria-controls="collapse_dataset">
+                  Dataset Info
+                </button>
+          </h5>
+        </div>
+        <div id="collapse_dataset" class="collapse show" aria-labelledby="heading_dataset" data-parent="#accordion">
+              <div class="card-body">
+                  <table class="table table-bordered table-hover table-striped">
+                    <tr>
+                        <td class="bold">Name of Zip-file</td>
+                        <td>{{ dataset_info.dataset_name}}</td>
+                    </tr>
+                    <tr>
+                        <td class="bold">Number of measurements</td>
+                        <td>{{ dataset_info.number_of_files}}</td>
+                    </tr>
+
+                    {% if dataset_info.peak_layer_filename %}
+                    <tr>
+                        <td class="bold">Visualnow Layer File</td>
+                        <td> {{dataset_info.peak_layer_filename}} </td>
+                    </tr>
+                    {% endif %}
+
+                    <tr>
+                        <td class="bold">Measurements</td>
+                        <td class="bold">Filename</td>
+                        <td class="bold">Label</td>
+                    </tr>
+                    {% for measurement_name, class_label in dataset_info.labeled_measurements %}
+                    <tr>
+                        <td></td>
+                        <td>{{measurement_name}}</td>
+                        <td>{{class_label}}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+              </div>
+        </div>
+    </div>
+        <div class="card">
+            <div class="card-header" id="heading_preprocessing">
+                  <h5 class="mb-0">
+                        <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapse_preprocessing" aria-expanded="false" aria-controls="collapse_preprocessing">
+                          Preprocessing Info
+                        </button>
+                  </h5>
+            </div>
+            <div id="collapse_preprocessing" class="collapse" aria-labelledby="heading_preprocessing" data-parent="#accordion">
+                  <div class="card-body">
+                    <table class="table table-bordered table-hover table-striped">
+                        <tr>
+                            <td class="bold">Peak Detection Method</td>
+                            <td class="bold">Parameters</td>
+                        </tr>
+                        {% for peak_detection_method_name, params in peak_detection_parameters.items %}
+                        <tr>
+                            <td>
+                                {{ peak_detection_method_name }}
+                            </td>
+                            <td>
+                                {{params}}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <table class="table table-bordered table-hover table-striped">
+                        <tr>
+                            <td class="bold">Peak Alignment Method</td>
+                            <td class="bold">Parameters</td>
+                        </tr>
+                        {% for peak_alignment_method_name, params in peak_alignment_parameters.items %}
+                        <tr>
+                            <td>
+                                {{ peak_alignment_method_name }}
+                            </td>
+                            <td>
+                                {{params}}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <table class="table table-bordered table-hover table-striped">
+                        <tr>
+                            <td class="bold">Denoising Steps</td>
+                            <td class="bold">Parameters</td>
+                        </tr>
+                        {% for denoising_method_name, params in denoising_parameters.items %}
+                        <tr>
+                            <td>
+                                {{ denoising_method_name }}
+                            </td>
+                            <td>
+                                {{params}}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <table class="table table-bordered table-hover table-striped">
+                        <tr>
+                            <td class="bold">Normalization Steps</td>
+                            <td class="bold">Parameters</td>
+                        </tr>
+                        {% for normalization_method_name, params in normalization_parameters.items %}
+                        <tr>
+                            <td>
+                                {{ normalization_method_name }}
+                            </td>
+                            <td>
+                                {{params}}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                  </div>
+            </div>
+    </div>
+
+    <div class="row justify-content-center">
+        {% crispy review_form %}
+    </div>
+
+{% endblock %}

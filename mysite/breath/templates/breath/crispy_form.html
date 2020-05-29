@@ -1,0 +1,8 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+    <h2>Crispy Form</h2>
+    {% load crispy_forms_tags %}
+    {% crispy example_form example_form.helper %}
+
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+
+{% load static %}
+<!-- celery progressbar -->
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+<script src="/balsam/static/js/jquery-celery/celery.js"></script>
+<script src="/balsam/static/js/jquery-celery/celery.progressbar.js"></script>
+
+<div class="row justify-content-center">
+
+    <div class="jobtastic-panel" style="margin: 10%;">
+        <div class="lds-css ng-scope">
+            <div id="loading_animation" style="width:100%;height:100%" class="lds-rolling">
+                <div>
+                </div>
+            </div>
+        </div>
+        <div class="jobtastic-result">
+            <em>Just loaded the page, but waiting on the task.</em>
+        </div>
+        <div class="progress" style="width:100%">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+    </div>
+    <div style="display: none;" id="jobtastic-task" data-task-id="{{ task_id }}"></div>
+
+</div>
+
+    <script>
+
+        $(document).ready(function() {
+
+            function customSuccess(){
+                $(location).attr('href', "{{ result_url }}")
+            }
+
+            var taskId = $("#jobtastic-task").data("task-id");
+            var taskUrl = "{{ task_url }}";
+
+            // define a error call back if the task returns a failure state
+            function error() {
+                $(".jobtastic-result").empty().append("<strong>Something went horribly wrong.</strong>");
+                $("#loading_animation").hide();
+            };
+
+            // first wait for a second - tasks don't complete before that anyways
+            setTimeout(function(){
+
+            $.fn.djcelery({
+                task_id: taskId,
+                task_url: taskUrl,
+                check_interval: 2000,
+                on_success: function (task) {
+                    var complete_percentage = 100;
+                    $(".jobtastic-result").empty().append("<strong>The task has completed!</strong>");
+                    $('.progress-bar').css({'width': complete_percentage + '%'});
+                    $('.progress-bar').html(complete_percentage + '%');
+                    $("#loading_animation").hide();
+                    customSuccess();
+                },
+                on_failure: error,
+                on_error: error,
+                on_other: function(task) {
+                    if (task.status == "PROGRESS") {
+                        var complete_percentage = Math.round(task.result.progress_percent * 100) / 100;
+                        $(".jobtastic-result").empty().append("Calculation in progress");
+                        // have progress bar have a minimum width of 10% - so one can always read the indicator number
+                        $('.progress-bar').css({'width': Math.max(complete_percentage, 10.0) + '%'});
+                        $('.progress-bar').html(complete_percentage + '%');
+                    };
+                }
+            });
+
+            },1000);
+        });
+    </script>
+
+<div class="row justify-content-center">
+    <div>If not automatically redirected, click <a href="{{ result_url }}">here</a>.</div>
+</div>
+{% endblock %}
+
