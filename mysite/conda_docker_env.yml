@@ -45,7 +45,7 @@ dependencies:
   - kiwisolver=1.2.0=py36hdb11119_0
   - kombu=3.0.37=py36_0
   - krb5=1.16.4=h2fd8d38_0
-  - ld_impl_linux-64=2.34=h53a641e_0
+  - ld_impl_linux-64
   - libblas
   - libcblas
   - libclang
