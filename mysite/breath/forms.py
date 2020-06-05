@@ -641,6 +641,10 @@ class AnalysisFormMatcher(object):
         # selected_performance_measures = analysisForm.cleaned_data['performance_measure']
         selected_performance_measures = analysisForm.cleaned_data['performance_measure']
         selected_feature_reduction = analysisForm.cleaned_data['feature_reduction']
+        # changed, RFC is always enabled, as needed for prediction
+        if PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION not in selected_performance_measures:
+            selected_performance_measures.append(PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION)
+
         if PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION in selected_performance_measures:
             rf = dict()
             key_prefix = "random_forest_"
@@ -722,15 +726,13 @@ class AnalysisForm(forms.Form):
 
     performance_measure = forms.TypedMultipleChoiceField(
         label = "Evaluation Parameters",
-        # choices = ((1, "Yes"), (0, "No")),
-        # needed to be adapted to handle decision tree params?
-        # choices = zip(options_to_name(MccImsAnalysis.AVAILABLE_PERFORMANCE_MEASURES),
-        #               options_to_name(MccImsAnalysis.AVAILABLE_PERFORMANCE_MEASURES)),
-        choices = zip(options_to_name((PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION, PerformanceMeasure.FDR_CORRECTED_P_VALUE)),
-                      options_to_name((PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION, PerformanceMeasure.FDR_CORRECTED_P_VALUE))),
+        # choices = zip(options_to_name((PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION, PerformanceMeasure.FDR_CORRECTED_P_VALUE)),
+        #               options_to_name((PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION, PerformanceMeasure.FDR_CORRECTED_P_VALUE))),
+        choices = zip(options_to_name([PerformanceMeasure.FDR_CORRECTED_P_VALUE]),
+                                      options_to_name([PerformanceMeasure.FDR_CORRECTED_P_VALUE])),
         coerce = lambda x: PerformanceMeasure(x),
         widget = forms.CheckboxSelectMultiple,
-        initial = [PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION.name, PerformanceMeasure.FDR_CORRECTED_P_VALUE.name],
+        initial = [PerformanceMeasure.FDR_CORRECTED_P_VALUE.name],
         required = True,
     )
     feature_reduction = forms.TypedMultipleChoiceField(
@@ -1559,14 +1561,11 @@ class GCMSEvaluationForm(forms.Form):
     performance_measure = forms.TypedMultipleChoiceField(
         label = "Evaluation Parameters",
         # choices = ((1, "Yes"), (0, "No")),
-        choices=zip(
-                options_to_name(
-                    (PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION, PerformanceMeasure.FDR_CORRECTED_P_VALUE)),
-                options_to_name(
-                    (PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION, PerformanceMeasure.FDR_CORRECTED_P_VALUE))),
-        coerce = lambda x: PerformanceMeasure(x),
-        widget = forms.CheckboxSelectMultiple,
-        initial = [PerformanceMeasure.RANDOM_FOREST_CLASSIFICATION.name, PerformanceMeasure.FDR_CORRECTED_P_VALUE.name],
+        choices=zip(options_to_name([PerformanceMeasure.FDR_CORRECTED_P_VALUE]),
+                    options_to_name([PerformanceMeasure.FDR_CORRECTED_P_VALUE])),
+        coerce=lambda x: PerformanceMeasure(x),
+        widget=forms.CheckboxSelectMultiple,
+        initial=[PerformanceMeasure.FDR_CORRECTED_P_VALUE.name],
         required = True,
     )
 
