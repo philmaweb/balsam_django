@@ -733,7 +733,7 @@ class AnalysisForm(forms.Form):
         coerce = lambda x: PerformanceMeasure(x),
         widget = forms.CheckboxSelectMultiple,
         initial = [PerformanceMeasure.FDR_CORRECTED_P_VALUE.name],
-        required = True,
+        required=False,  # cant be required and only with a single option
     )
     feature_reduction = forms.TypedMultipleChoiceField(
         label = "Feature Reduction",
@@ -1560,13 +1560,12 @@ class GCMSEvaluationForm(forms.Form):
 
     performance_measure = forms.TypedMultipleChoiceField(
         label = "Evaluation Parameters",
-        # choices = ((1, "Yes"), (0, "No")),
         choices=zip(options_to_name([PerformanceMeasure.FDR_CORRECTED_P_VALUE]),
                     options_to_name([PerformanceMeasure.FDR_CORRECTED_P_VALUE])),
         coerce=lambda x: PerformanceMeasure(x),
         widget=forms.CheckboxSelectMultiple,
         initial=[PerformanceMeasure.FDR_CORRECTED_P_VALUE.name],
-        required = True,
+        required=False,  # cant be required and only with a single option
     )
 
     decision_tree_min_samples_leaf = forms.IntegerField(
