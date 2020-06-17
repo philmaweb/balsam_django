@@ -17,7 +17,7 @@ import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # PROJECT_DIR = "/".join(BASE_DIR.split("/")[:-1])
 
-dir_to_add = BASE_DIR + "/breath/external/breathpy"
+dir_to_add = BASE_DIR + "/breath/external/breathpy/breathpy"
 if dir_to_add not in sys.path:
     sys.path.append(dir_to_add)
     print("Adding {0} to pythonpath".format(dir_to_add))

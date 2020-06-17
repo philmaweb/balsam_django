@@ -25,14 +25,14 @@ from .models import (WebPredictionModel, ZipFileValidator, PredefinedFileset, Pr
                      GCMSFileSet, GCMSPeakDetectionFileSet, GCMSPeakDetectionResult,
                      GCMSPredefinedPeakDetectionFileSet, create_GCMS_peak_detection_fileset_from_zip, create_gcms_fileset_from_zip)
 
-from breath.external.breathpy.model.ProcessingMethods import (
+from breathpy.model.ProcessingMethods import (
     PeakDetectionMethod, ExternalPeakDetectionMethod, PeakAlignmentMethod, DenoisingMethod, NormalizationMethod,
     PerformanceMeasure, FeatureReductionMethod,
     GCMSPeakDetectionMethod, GCMSAlignmentMethod, GCMSPreprocessingMethod, GCMSSupportedDatatype
 )
 
-from breath.external.breathpy.model.GCMSTools import (filter_mzml_or_mzxml_filenames, filter_feature_xmls)
-from breath.external.breathpy.model.BreathCore import (
+from breathpy.model.GCMSTools import (filter_mzml_or_mzxml_filenames, filter_feature_xmls)
+from breathpy.model.BreathCore import (
     MccImsAnalysis, construct_custom_processing_evaluation_dict,
     GCMSAnalysis,
 )

@@ -12,7 +12,7 @@ from .models import (MccImsAnalysisWrapper, GCMSPeakDetectionFileSet, GCMSFileSe
                      WebPredictionModel, PredictionResult,
                      RocPlotModel, BoxPlotModel, DecisionTreePlotModel,)
 
-from breath.external.breathpy.model.ProcessingMethods import (GCMSPeakDetectionMethod)
+from breathpy.model.ProcessingMethods import (GCMSPeakDetectionMethod)
 
 @csrf_protect
 def _selectDatasetGMCS(request, user):

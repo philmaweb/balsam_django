@@ -14,12 +14,12 @@ from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from breath.cleanup_db import clean_up
 
-from breath.external.breathpy.model.BreathCore import (
+from breathpy.model.BreathCore import (
     construct_default_parameters,
     MccImsAnalysis, GCMSAnalysis
                  )
 
-from breath.external.breathpy.model.ProcessingMethods import (
+from breathpy.model.ProcessingMethods import (
     PeakDetectionMethod, GCMSPeakDetectionMethod, PeakAlignmentMethod,
     ExternalPeakDetectionMethod,
     PerformanceMeasure,

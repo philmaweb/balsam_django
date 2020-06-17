@@ -25,7 +25,7 @@ from .models import (RawFile, ProcessedFile, WebPeakDetectionResult, MccImsAnaly
                      GCMSRawMeasurement,
                      GCMSFileSet, GCMSUnlinkedPeakDetectionResult, GCMSPeakDetectionFileSet)
 
-from breath.external.breathpy.model.BreathCore import GCMSAnalysis
+from breathpy.model.BreathCore import GCMSAnalysis
 from decimal import Decimal
 import time
 import datetime
@@ -45,10 +45,10 @@ class PredictClassTask(JobtasticTask):
 
     def calculate_result(self, analysis_id, prediction_file_set_id, **kwargs):
         from .models import ClassPredictionFileSet, WebPredictionModel, PredictionResult
-        from breath.external.breathpy.model.BreathCore import ExternalPeakDetectionMethod, PredictionModel
+        from breathpy.model.BreathCore import ExternalPeakDetectionMethod, PredictionModel
         from shutil import rmtree
         from pathlib import Path
-        from sklearn.externals import joblib
+        import joblib
         total_progress = 5
 
         # get evaluation params from analysis
@@ -173,8 +173,8 @@ class EvaluatePerformanceTask(JobtasticTask):
     def calculate_result(self, analysis_id,  **kwargs):
         from collections import Counter
         from .models import WebPredictionModel, BoxPlotModel, RocPlotModel
-        from breath.external.breathpy.model.BreathCore import FeatureReductionMethod, PerformanceMeasure
-        from breath.external.breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot, ClusterPlot
+        from breathpy.model.BreathCore import FeatureReductionMethod, PerformanceMeasure
+        from breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot, ClusterPlot
         import numpy as np
         # get evaluation params from analysis
         wrapper = MccImsAnalysisWrapper.objects.get(pk=analysis_id)
@@ -485,8 +485,8 @@ class CustomPeakDetectionAnalysisTask(JobtasticTask):
     def calculate_result(self, analysis_id, **kwargs):
         from collections import Counter
         from .models import WebPredictionModel, BoxPlotModel, RocPlotModel
-        from breath.external.breathpy.model.BreathCore import FeatureReductionMethod, PerformanceMeasure
-        from breath.external.breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot, \
+        from breathpy.model.BreathCore import FeatureReductionMethod, PerformanceMeasure
+        from breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot, \
             ClusterPlot
         import numpy as np
 
@@ -704,8 +704,8 @@ class CustomPeakDetectionFMAnalysisTask(JobtasticTask):
         from django.core.files.base import ContentFile
         from django.core.files.images import ImageFile
         from .models import WebPredictionModel, BoxPlotModel, RocPlotModel, FeatureMatrix
-        from breath.external.breathpy.model.ProcessingMethods import FeatureReductionMethod, PerformanceMeasure, ExternalPeakDetectionMethod
-        from breath.external.breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot
+        from breathpy.model.ProcessingMethods import FeatureReductionMethod, PerformanceMeasure, ExternalPeakDetectionMethod
+        from breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot
         import numpy as np
 
 
@@ -923,8 +923,8 @@ class CustomPredictClassTask(JobtasticTask):
 
     def calculate_result(self, analysis_id, customPDFS_id=0, feature_matrix_id=0, **kwargs):
         from .models import WebPredictionModel, PredictionResult, FeatureMatrix
-        from breath.external.breathpy.model.BreathCore import PredictionModel
-        from sklearn.externals import joblib
+        from breathpy.model.BreathCore import PredictionModel
+        import joblib
         total_progress = 3
 
         # get evaluation params from analysis
@@ -1100,8 +1100,8 @@ class ParallelAutomaticPreprocessingEvaluationTask(JobtasticTask):
 
         from collections import Counter
         from .models import WebPredictionModel, BoxPlotModel, RocPlotModel
-        from breath.external.breathpy.model.BreathCore import FeatureReductionMethod, PerformanceMeasure
-        from breath.external.breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot, \
+        from breathpy.model.BreathCore import FeatureReductionMethod, PerformanceMeasure
+        from breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot, \
             ClusterPlot
         import numpy as np
 
@@ -1416,7 +1416,7 @@ class ParallelAutomaticPreprocessingEvaluationTask(JobtasticTask):
 @app.task(bind=True)
 def full_parallel_preprocessing(self, analysis_id):
     # could be used to do parallel preprocessing, but does not allow for progress tracking but will return emmidiately
-    from breath.external.breathpy.model.BreathCore import ExternalPeakDetectionMethod
+    from breathpy.model.BreathCore import ExternalPeakDetectionMethod
     from shutil import rmtree
     # from functools import partial
 
@@ -1447,7 +1447,7 @@ def update_fileset(tuples, analysis_id):
     :param analysis_id:
     :return:
     """
-    from breath.external.breathpy.model.BreathCore import ExternalPeakDetectionMethod
+    from breathpy.model.BreathCore import ExternalPeakDetectionMethod
     from shutil import rmtree
 
     wrapper = MccImsAnalysisWrapper.objects.get(pk=analysis_id)
@@ -1515,7 +1515,7 @@ def preprocess_measurement(raw_file_id, preprocessing_options):
     :param preprocessing_options:
     :return:
     """
-    from breath.external.breathpy.model.BreathCore import MccImsMeasurement, MccImsAnalysis, \
+    from breathpy.model.BreathCore import MccImsMeasurement, MccImsAnalysis, \
         ExternalPeakDetectionMethod
     # load measurement from db
     # preprocess measurement
@@ -1595,7 +1595,7 @@ def cluster_overlay_plots(analysis_id):
     :param analysis_id:
     :return:
     """
-    from breath.external.breathpy.view.BreathVisualizations import ClusterPlot
+    from breathpy.view.BreathVisualizations import ClusterPlot
 
     wrapper = MccImsAnalysisWrapper.objects.get(pk=analysis_id)
     print("Starting cluster overlay plots for analysis {}\n Measurements: {}".format(analysis_id,
@@ -1648,8 +1648,8 @@ def heatmap_plot(processed_file_id, analysis_id, user_id):
     :param user_id:
     :return:
     """
-    from breath.external.breathpy.model.BreathCore import construct_default_parameters, MccImsMeasurement
-    from breath.external.breathpy.view.BreathVisualizations import HeatmapPlot
+    from breathpy.model.BreathCore import construct_default_parameters, MccImsMeasurement
+    from breathpy.view.BreathVisualizations import HeatmapPlot
     from django.contrib.auth.models import User
 
     # start analysis process and serve up some pdfs
@@ -1686,8 +1686,8 @@ def classwise_heatmap_plots(analysis_id, user_id):
     :param user_id: owners id
     :return: primary keys of PlotModel Instances created for each class_label
     """
-    from breath.external.breathpy.model.BreathCore import construct_default_parameters, MccImsMeasurement
-    from breath.external.breathpy.view.BreathVisualizations import HeatmapPlot
+    from breathpy.model.BreathCore import construct_default_parameters, MccImsMeasurement
+    from breathpy.view.BreathVisualizations import HeatmapPlot
     from django.contrib.auth.models import User
 
     # start analysis process and serve up some pdfs
@@ -1729,7 +1729,7 @@ def process_gcms_measurement(raw_file_id, preprocessing_options):
     """
     import os
     from pathlib import Path
-    from breath.external.breathpy.model.BreathCore import GCMSAnalysis
+    from breathpy.model.BreathCore import GCMSAnalysis
     from .models import GCMSRawMeasurement, GCMSUnlinkedPeakDetectionResult
 
     raw_file = GCMSRawMeasurement.objects.get(pk=raw_file_id)
@@ -1852,8 +1852,8 @@ class GCMSAnalysisEvaluationTask(JobtasticTask):
     def calculate_result(self, analysis_id, **kwargs):
         from collections import Counter
         from .models import WebPredictionModel, BoxPlotModel, RocPlotModel
-        from breath.external.breathpy.model.ProcessingMethods import FeatureReductionMethod, PerformanceMeasure
-        from breath.external.breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot
+        from breathpy.model.ProcessingMethods import FeatureReductionMethod, PerformanceMeasure
+        from breathpy.view.BreathVisualizations import RocCurvePlot, BoxPlot, TreePlot
         import numpy as np
 
 
@@ -2079,8 +2079,8 @@ class GCMSPredictClassTask(JobtasticTask):
 
     def calculate_result(self, analysis_id, gcms_fileset_id=0, feature_matrix_id=0, **kwargs):
         from .models import WebPredictionModel, PredictionResult, FeatureMatrix
-        from breath.external.breathpy.model.BreathCore import PredictionModel
-        from sklearn.externals import joblib
+        from breathpy.model.BreathCore import PredictionModel
+        import joblib
         total_progress = 10
 
         # get evaluation params from analysis

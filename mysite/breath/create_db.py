@@ -99,7 +99,7 @@ def add_predefined_peak_detection_filesets():
                      ]
 
     # append results suffix and pdm name
-    from breath.external.breathpy.model.ProcessingMethods import PeakDetectionMethod, ExternalPeakDetectionMethod
+    from breathpy.model.ProcessingMethods import PeakDetectionMethod, ExternalPeakDetectionMethod
     pdms_to_include = [ExternalPeakDetectionMethod.PEAX, PeakDetectionMethod.TOPHAT, PeakDetectionMethod.VISUALNOWLAYER]
 
 
@@ -154,7 +154,7 @@ def add_predefined_peak_detection_filesets():
 
 def create_cpdr_from_zip(archive_path, pdm):
     # from pathlib import Path
-    from breath.external.breathpy.model.BreathCore import MccImsAnalysis
+    from breathpy.model.BreathCore import MccImsAnalysis
     from .models import UnlinkedWebPeakDetectionResult
     from django.core.files.base import ContentFile
 
@@ -192,7 +192,7 @@ def add_predefined_gcms_filesets():
                      'train_algae.zip', 'test_algae.zip',
                      ]
 
-    from breath.external.breathpy.model.ProcessingMethods import GCMSPeakDetectionMethod
+    from breathpy.model.ProcessingMethods import GCMSPeakDetectionMethod
     pdms_to_include = [GCMSPeakDetectionMethod.ISOTOPEWAVELET]
     sets_to_avoid = []
     descriptions, names, archive_names, pdms = [], [], [], []

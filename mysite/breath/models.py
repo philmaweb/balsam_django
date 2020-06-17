@@ -7,7 +7,7 @@ from io import BytesIO, StringIO
 import os
 from pathlib import Path
 from shutil import rmtree
-from sklearn.externals import joblib
+import joblib
 
 from collections import Counter, OrderedDict
 from itertools import chain
@@ -30,7 +30,7 @@ from django.template.defaultfilters import filesizeformat
 from django.utils.deconstruct import deconstructible
 from django.utils.timezone import now
 
-from breath.external.breathpy.model.BreathCore import (
+from breathpy.model.BreathCore import (
                               AnalysisResult,
                               MccImsAnalysis,
                               MccImsMeasurement,
@@ -40,7 +40,7 @@ from breath.external.breathpy.model.BreathCore import (
                               construct_default_processing_evaluation_steps,
                               GCMSAnalysis,
 )
-from breath.external.breathpy.model.ProcessingMethods import (PeakDetectionMethod,
+from breathpy.model.ProcessingMethods import (PeakDetectionMethod,
                               ExternalPeakDetectionMethod,
                               NormalizationMethod,
                               PeakAlignmentMethod,
@@ -51,7 +51,7 @@ from breath.external.breathpy.model.ProcessingMethods import (PeakDetectionMetho
                               GCMSAlignmentMethod,
                               GCMSPreprocessingMethod,
                                                                     )
-from breath.external.breathpy.model.GCMSTools import (filter_mzml_or_mzxml_filenames)
+from breathpy.model.GCMSTools import (filter_mzml_or_mzxml_filenames)
 
 
 class TempUserManager(models.Manager):
@@ -1928,9 +1928,9 @@ def create_gcms_pdr_from_zip(archive_path, pdm):
     :param pdm:
     :return:
     """
-    # from breath.external.breathpy.model.ProcessingMethods import GCMSPeakDetectionMethod
-    from breath.external.breathpy.model.BreathCore import MccImsAnalysis
-    from breath.external.breathpy.model.GCMSTools import filter_feature_xmls
+    # from breathpy.model.ProcessingMethods import GCMSPeakDetectionMethod
+    from breathpy.model.BreathCore import MccImsAnalysis
+    from breathpy.model.GCMSTools import filter_feature_xmls
     from django.core.files.base import ContentFile
     import zipfile
     from io import BytesIO
