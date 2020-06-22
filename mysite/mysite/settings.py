@@ -12,17 +12,18 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 import sys
+from breathpy.tools.tools import get_peax_binary_path
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# PROJECT_DIR = "/".join(BASE_DIR.split("/")[:-1])
 
-dir_to_add = BASE_DIR + "/breath/external/breathpy/breathpy"
-if dir_to_add not in sys.path:
-    sys.path.append(dir_to_add)
-    print("Adding {0} to pythonpath".format(dir_to_add))
+
+# dir_to_add = BASE_DIR + "/breath/external/breathpy/breathpy"
+# if dir_to_add not in sys.path:
+#     sys.path.append(dir_to_add)
+#     print("Adding {0} to pythonpath".format(dir_to_add))
 if "PEAX_BINARY_PATH" not in os.environ:
-    PEAX_BINARY_PATH = dir_to_add + "/bin/peax1.0-LinuxX64/peax"
+    PEAX_BINARY_PATH = str(get_peax_binary_path())
     os.environ.setdefault("PEAX_BINARY_PATH", PEAX_BINARY_PATH)
 
 # set peax binary path
