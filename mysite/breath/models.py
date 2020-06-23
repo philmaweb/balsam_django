@@ -1169,6 +1169,9 @@ class MccImsAnalysisWrapper(models.Model):
     @staticmethod
     def prepare_reduced_fm_json_representation_list(analysis_id):
         fm_full_qs = FeatureMatrix.objects.filter(analysis__pk=analysis_id, is_training_matrix=True)
+
+        # if automatic - could only get the matrices which were considered best
+        # but would mean users have lest overview
         reduced_fm_json_representation_list = []
 
         # one feature matrix per peak detection
