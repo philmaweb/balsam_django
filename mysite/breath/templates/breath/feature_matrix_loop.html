@@ -22,7 +22,7 @@
 
     {% if t_matrix.display_feature_matrix %}
 
-    function getData_{{forloop.counter}}(cb_func) {
+    function getData_t_{{forloop.counter}}(cb_func) {
         $.ajax({
           url: "{% url 'get_trainings_matrix_as_json' fm_id=t_matrix.pk %}",
           success: cb_func
@@ -30,7 +30,7 @@
     }
 
     $(document).ready(function() {
-      getData_{{forloop.counter}}(function( data ) {
+      getData_t_{{forloop.counter}}(function( data ) {
 
         // need to rearrange column names to match syntax "data":"col_name"
         var columns = [];
@@ -42,8 +42,8 @@
         $('#table_trainings_matrix_{{forloop.counter}}').DataTable( {
             dom: 'Bfrtip',
             buttons: [
-                'copy', {extend: 'csv', title: 'train_{{r_trainings_matrix.peak_detection_method_name}}_feature_matrix'},
-                 {extend: 'excel', title: 'train_{{r_trainings_matrix.peak_detection_method_name}}_feature_matrix'}
+                'copy', {extend: 'csv', title: 'train_{{t_matrix.peak_detection_method_name}}_feature_matrix'},
+                 {extend: 'excel', title: 'train_{{t_matrix.peak_detection_method_name}}_feature_matrix'}
             ],
             processing: false,
             data: data.data,

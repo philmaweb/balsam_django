@@ -22,7 +22,7 @@
 
     {% if prediction_matrix.display_feature_matrix %}
 
-    function getData_{{forloop.counter}}(cb_func) {
+    function getData_p_{{forloop.counter}}(cb_func) {
         $.ajax({
           url: "{% url 'get_trainings_matrix_as_json' fm_id=prediction_matrix.pk %}",
           success: cb_func
@@ -30,7 +30,7 @@
     }
 
     $(document).ready(function() {
-      getData_{{forloop.counter}}(function( data ) {
+      getData_p_{{forloop.counter}}(function( data ) {
 
         // need to rearrange column names to match syntax "data":"col_name"
         var columns = [];

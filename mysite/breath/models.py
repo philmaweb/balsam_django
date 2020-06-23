@@ -1191,6 +1191,9 @@ class MccImsAnalysisWrapper(models.Model):
         #     fm_models = FeatureMatrix.objects.filter(analysis__pk=self.pk, peak_detection_method_name=self.automatic_selected_method_name)
         # else:
         fm_full_qs = FeatureMatrix.objects.filter(analysis__pk=self.pk, is_training_matrix=True)
+
+        # shown training matrix was actually same as test matrix - due to javascript function name collisions - fixed
+
         fm_json_representation_list = MccImsAnalysisWrapper.prepare_fm_for_template(fm_full_qs)
         pm_json_representation_list = MccImsAnalysisWrapper.prepare_fm_for_template(FeatureMatrix.objects.filter(analysis__pk=self.pk, is_prediction_matrix=True))
         reduced_fm_json_representation_list = MccImsAnalysisWrapper.prepare_reduced_fm_json_representation_list(analysis_id=self.pk)
@@ -1206,7 +1209,7 @@ class MccImsAnalysisWrapper(models.Model):
                 dataset_name = self.gcms_set.name
             else:
                 dataset_name = "unknown"
-            # pre-match csv_filenames with labels in class_label_dict
+            # pre-match csv_filenames with labels in class_label_dict ,  as required by template
             matched_tuples = [(fn, label) for fn,label in class_label_dict.items()]
 
             csv_filenames = list(class_label_dict.keys())
