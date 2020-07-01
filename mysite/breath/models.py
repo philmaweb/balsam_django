@@ -1177,9 +1177,9 @@ class MccImsAnalysisWrapper(models.Model):
         # one feature matrix per peak detection
         for fm_model in fm_full_qs:
             peak_detection_method_name = fm_model.peak_detection_method_name
-            for (r_fn, evaluation_method_name) in fm_model.get_reduced_feature_matrices():
+            for (r_fm_df, evaluation_method_name) in fm_model.get_reduced_feature_matrices():
                 reduced_fm_json_representation_list.append(FeatureMatrix.feature_matrix_df_to_json(
-                    r_fn, evaluation_method_name=evaluation_method_name,
+                    r_fm_df, evaluation_method_name=evaluation_method_name,
                     peak_detection_method_name=peak_detection_method_name))
         return reduced_fm_json_representation_list
 
@@ -1546,7 +1546,7 @@ class StatisticsModel(models.Model):
         return pd.read_csv(self.best_features_df.path, index_col=0).dropna(axis=1, how='all')
 
     def __str__(self):
-        return "StatisticsModel {0} - Analysis {1} - EvalMethodName: {2}".format(self.pk, self.analysis.pk, str(self.evaluation_method_name))
+        return f"StatisticsModel {self.pk} - Analysis {self.analysis.pk} - EvalMethodName: {str(self.evaluation_method_name)}"
 
 
 class FeatureMatrix(models.Model):
@@ -1622,25 +1622,30 @@ class FeatureMatrix(models.Model):
         get all statsmodels associated with analysis
           select columns from feature matrix that are used for building prediction model - the reduced / best columns
         """
-        stats_model_qs = StatisticsModel.objects.filter(analysis=self.analysis)  # should be two - one per evaluation method
+        stats_model_qs = StatisticsModel.objects.filter(analysis=self.analysis)  # should be two models - one per evaluation method
 
         # 1 reduced feature matrix for each evaluation option
         rv = []
         full_feature_matrix = self.get_feature_matrix()
+
+        wanted_pdmn = self.peak_detection_method_name
 
         full_feature_columns = set(full_feature_matrix.columns.values)
         # full_feature_matrix = stats_model_object.get_best_features_df()
         for stats_model_object in stats_model_qs:
             # get feature names from stats_model - prediction model are not always existent when calling this
             # reduced_feature_set = set(stats_model_object.get_best_features_df()['peak_id'].values)
-            reduced_feature_names_unfiltered = stats_model_object.get_best_features_df()['peak_id'].values
 
-            # could lead to KeyError when not all identical columns names / peak_ids used - needed filter
-            contained_columns = [col for col in reduced_feature_names_unfiltered if col in full_feature_columns]
-            # for not_contained_col in not_contained_columns:
-            #     full_feature_matrix[]
-            # mask = [fn in reduced_feature_set for fn in full_feature_matrix.columns]
-            reduced_feature_matrix = full_feature_matrix[contained_columns]
+            # filter by peak_detection_method_name from feature matrix and get best peaks from stats model
+            master_feature_matrix = stats_model_object.get_best_features_df()
+            feature_matrix = master_feature_matrix.loc[master_feature_matrix['peak_detection_method_name'] == wanted_pdmn]
+
+            # sort peak_ids alphabetically - before by performance measure
+            best_peak_ids = sorted(feature_matrix['peak_id'].values)
+
+            # could lead to KeyError when not all identical columns names / peak_ids used
+
+            reduced_feature_matrix = full_feature_matrix.loc[full_feature_matrix.index, full_feature_matrix.columns.intersection(best_peak_ids)]
 
             rv.append((reduced_feature_matrix, stats_model_object.evaluation_method_name))
         return rv

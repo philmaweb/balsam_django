@@ -19,6 +19,7 @@ from .models import (WebImsSet,
                      WebPeakDetectionResult,
                      DecisionTreePlotModel,
                      RocPlotModel,
+                     StatisticsModel,
                      GCMSUnlinkedPeakDetectionResult,
                      GCMSPredefinedPeakDetectionFileSet,
                      GCMSRawMeasurement,
@@ -43,6 +44,7 @@ admin.site.register(PredictionResult)
 admin.site.register(ClassPredictionFileSet)
 admin.site.register(DecisionTreePlotModel)
 admin.site.register(RocPlotModel)
+admin.site.register(StatisticsModel)
 admin.site.register(GCMSUnlinkedPeakDetectionResult)
 admin.site.register(GCMSPredefinedPeakDetectionFileSet)
 admin.site.register(GCMSRawMeasurement)
