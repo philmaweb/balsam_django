@@ -452,6 +452,7 @@ class CustomPeakDetectionFileSet(models.Model):
             os.remove(full_media_path)
         super(CustomPeakDetectionFileSet, self).delete(*args, **kwargs)
 
+
 class PredefinedCustomPeakDetectionFileSet(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=100)
@@ -460,14 +461,11 @@ class PredefinedCustomPeakDetectionFileSet(models.Model):
     upload = models.FileField(upload_to='archives/predefined_pdr/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-
     def get_class_label_processed_id_dict(self):
         return OrderedDict(sorted(self.class_label_processed_id_dict.items(), key=lambda t: t[0]))
 
     def __str__(self):
         return f"{self.name} - {self.description}"
-        # return "PredefinedFileset {0} - pk {1} - {2} - uploaded at {3}".format(
-        #     self.name, self.pk, self.description, str(self.uploaded_at),)
 
     def delete(self, *args, **kwargs):
         full_media_path = os.path.join(settings.MEDIA_ROOT, self.upload.name)
@@ -647,7 +645,7 @@ class WebPeakDetectionResult(models.Model):
 
 class WebImsSet(models.Model):
     # will hold a zipfile and create a directory for extraction of the zip?
-    # delete content after 3 months - calling on index
+    # delete content after 30 days
     # see DIMANA cleanupresults.py --> cleans up results after setting.CLEANUP_RESULTS_OLDER_DAYS
     # file will be saved to MEDIA_ROOT/user_<id>/<filename>
     one_mb = 1024 * 1024
@@ -657,12 +655,6 @@ class WebImsSet(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     file_set = models.ForeignKey(FileSet, on_delete=models.CASCADE)
-
-    # pass zipfiles to make MccImsMeasurements
-    # print(upload)
-    # file_set = File_set()
-    # analysis_group = models.ForeignKey()
-    # analysis_group = models.ForeignKey()
 
     def __str__(self):
         return f"WebImsSet {self.pk} - {self.upload.name} - uploaded at {str(self.uploaded_at)} by {self.user}"
