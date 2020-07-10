@@ -1,5 +1,6 @@
 # import pdb
 import magic  # installed via package python-magic
+from enum import Enum
 import numpy as np
 import pandas as pd
 from zipfile import ZipFile
@@ -12,6 +13,7 @@ import joblib
 from collections import Counter, OrderedDict
 from itertools import chain
 from uuid import uuid4
+from sklearn.model_selection import train_test_split
 
 from django import forms
 from django.conf import settings
@@ -377,8 +379,6 @@ class FileSet(models.Model):
         super(FileSet, self).delete(*args, **kwargs)
 
 
-
-
 class PredefinedFileset(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=100)
@@ -407,12 +407,9 @@ class PredefinedFileset(models.Model):
         self.class_label_mapping = OrderedDict(sorted(class_label_mapping.items(), key=lambda t: t[0]))
         self.save()
 
-
     def __str__(self):
         return "{0} - {2}".format(
             self.name, self.pk, self.description, str(self.uploaded_at),)
-        # return "PredefinedFileset {0} - pk {1} - {2} - uploaded at {3}".format(
-        #     self.name, self.pk, self.description, str(self.uploaded_at),)
 
     def delete(self, *args, **kwargs):
         full_media_path = os.path.join(settings.MEDIA_ROOT, self.upload.name)
@@ -420,6 +417,80 @@ class PredefinedFileset(models.Model):
         if not "/media/setup/" in full_media_path:
             os.remove(full_media_path)
         super(PredefinedFileset, self).delete(*args, **kwargs)
+
+
+class AnalysisType(Enum):
+    """
+    Defines UserDefinedFileset analysis types
+    """
+    RAW_MCC_IMS = "RAW_MCC_IMS"
+    RAW_GC_MS = "RAW_GC_MS"
+    FEATURE_MATRIX = "FEATURE_MATRIX"
+
+    @classmethod
+    def choices(cls):
+        return tuple((i.name, i.value) for i in cls)
+#
+#
+# class UserDefinedDataset(models.Model):
+#     """Dataset uploaded by user - is used to create `UserDefinedFileset` or `FeatureMatrix` `UserDefinedCustomPeakDetectionFileset`?
+#     """
+#     # FIXME dont need this class - just have intermediary handle creation of object immediately
+#     name = models.CharField(max_length=100, unique=True)
+#     description = models.CharField(max_length=100)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     class_label_mapping = JSONField(default=dict)
+#     upload = models.FileField(upload_to='archives/user_defined/')
+#     uploaded_at = models.DateTimeField(auto_now_add=True)
+#     analysis_type = models.CharField(max_length=255, choices=AnalysisType.choices())
+#     train_test_ratio = models.FloatField()  # min =0.05 and max value 0.95 handled by form
+#
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         if self.upload and not self.class_label_mapping:
+#             self._setup_class_label_mapping()
+#
+#     def _setup_class_label_mapping(self):
+#         # Validate content of zip file
+#         with ZipFile(self.upload.path) as zip_file:
+#             # get the list of files
+#             zip_content = zip_file.namelist()
+#         class_label_file_name = MccImsAnalysis.guess_class_label_extension(dir_to_search=self.upload.path, file_list_alternative=zip_content)
+#         label_dict = MccImsAnalysis.parse_class_labels("{}/{}".format(self.upload.path, class_label_file_name))
+#         class_label_mapping = {filename: label_dict[filename] for filename in label_dict.keys()}
+#         self.class_label_mapping = OrderedDict(sorted(class_label_mapping.items(), key=lambda t: t[0]))
+#         self.save()
+#
+#     def __str__(self):
+#         return f"{self.name} - {self.description} - {self.analysis_type}"
+#
+#     def split(self):
+#         """
+#         FIXME
+#         Depending on `self.analysis_type` and `self.train_test_ratio` split into predefined Filesets
+#         """
+#         analysis_type = AnalysisType(self.analysis_type)
+#         if analysis_type == AnalysisType.RAW_MCC_IMS:
+#             self._split_fileset()
+#         elif analysis_type == AnalysisType.FEATURE_MATRIX:
+#             self._split_feature_matrix_fileset()
+#
+#
+#     def _split_fileset(self):
+#         """
+#         Create two `UserDefinedFileset` - one training and one validation set
+#         """
+#         #FIXME
+#
+#     def _split_feature_matrix_fileset(self):
+#
+#
+#     def _split_gcms_fileset(self):
+#         """
+#         Create two `GCMSUserDefinedPeakDetectionFileSet` - one training and one validation set
+#         """
+#         # FIXME
+
 
 class CustomPeakDetectionFileSet(models.Model):
     name = models.CharField(max_length=100)
@@ -1513,7 +1584,6 @@ class BestFeaturesOverlayPlot(HeatmapPlotModel):
             str(self.based_on_performance_measure_name))
 
 
-
 class DecisionTreePlotModel(PlotModel):
     based_on_performance_measure_name = models.CharField(max_length=100)
     pass
@@ -1541,6 +1611,40 @@ class StatisticsModel(models.Model):
         return f"StatisticsModel {self.pk} - Analysis {self.analysis.pk} - EvalMethodName: {str(self.evaluation_method_name)}"
 
 
+class UserDefinedFeatureMatrix(models.Model):
+    """
+    hold a user defined feature matrix
+    """
+    # never associated with analysis - serves as input for creating new Feature matrix
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    peak_detection_method_name = models.CharField(max_length=100)
+    file = models.FileField(upload_to='data/user_feature_matrix/')
+    # has to be held somwhere if no analysis yet
+    class_label_dict = JSONField(default=dict)  # needs to be sorted before using
+    is_training_matrix = models.BooleanField(default=True)
+    is_prediction_matrix = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def get_feature_matrix(self):
+        """Deserialize and reimport Dataframe from CSV"""
+        return pd.read_csv(self.file.path, index_col=0)
+
+    def __str__(self):
+        return f"UserDefinedFeatureMatrix {self.pk} - {User} PDMName: {str(self.peak_detection_method_name)}"
+
+    def get_class_label_dict(self):
+        """
+        Return sorted instance
+        :return:
+        """
+        return OrderedDict(sorted(self.class_label_dict.items(), key=lambda t: t[0]))
+
+    def delete(self, *args, **kwargs):
+        os.remove(os.path.join(settings.MEDIA_ROOT, self.file.name))
+        super(UserDefinedFeatureMatrix, self).delete(*args, **kwargs)
+
+
 class FeatureMatrix(models.Model):
     """
     hold a feature matrix and a reference to an analysis
@@ -1554,6 +1658,23 @@ class FeatureMatrix(models.Model):
     class_label_dict = JSONField(default=dict)  # needs to be sorted before using
     is_training_matrix = models.BooleanField(default=True)  # we only create FeatureMatrix for training
     is_prediction_matrix = models.BooleanField(default=False)  # we only create FeatureMatrix for training
+
+    @classmethod
+    def from_user_defined_feature_matrix(cls, user_defined_feature_matrix: UserDefinedFeatureMatrix, analysis_id: int):
+        """Call as
+           fm = FeatureMatrix.from_user_defined_feature_matrix(user_defined_feature_matrix)
+        """
+        # prep work
+        # year, month, day = map(int, date_str.split('-'))
+
+        return cls(analysis=MccImsAnalysisWrapper.get(analysis_id),
+                   name=user_defined_feature_matrix.name,
+                   peak_detection_method_name=user_defined_feature_matrix.peak_detection_method_name,
+                   file=user_defined_feature_matrix.file,
+                   class_label_dict=user_defined_feature_matrix.class_label_dict,
+                   is_training_matrix=user_defined_feature_matrix.is_training_matrix,
+                   is_prediction_matrix=user_defined_feature_matrix.is_prediction_matrix,
+                   )
 
     def get_feature_matrix(self):
         """Deserialize and reimport Dataframe from CSV"""
@@ -1599,14 +1720,12 @@ class FeatureMatrix(models.Model):
 
         return ExternalPeakDetectionMethod.CUSTOM
 
-
     def get_owning_user(self):
         """
         Get user from analysis
         :return: `User` object
         """
         return self.analysis.user
-
 
     def get_reduced_feature_matrices(self):
         """
@@ -1641,8 +1760,6 @@ class FeatureMatrix(models.Model):
 
             rv.append((reduced_feature_matrix, stats_model_object.evaluation_method_name))
         return rv
-
-
 
     @staticmethod
     def feature_matrix_df_to_json(dataframe, evaluation_method_name, peak_detection_method_name=ExternalPeakDetectionMethod.CUSTOM.name, pk=0):
@@ -1716,24 +1833,9 @@ class FeatureMatrix(models.Model):
         # return json
         return result
 
-
-
-    # def __unicode__(self):
-    #     # returns tuples of matching feature matrices
-    #     trainings_matrix = self.get_feature_matrix()
-    #     measurement_names = [fn.rsplit("_preprocessed", maxsplit=1)[0] for fn in trainings_matrix.index.values]
-    #     peak_ids = trainings_matrix.columns.values
-    #     feature_rows = np.round(trainings_matrix.values, decimals=3)
-    #     return {"measurement_names": measurement_names,
-    #         "peak_ids": peak_ids,
-    #         "feature_rows": zip(measurement_names, feature_rows),
-    #         "peak_detection_method_name": self.peak_detection_method_name}
-
-
     def delete(self, *args, **kwargs):
         os.remove(os.path.join(settings.MEDIA_ROOT, self.file.name))
         super(FeatureMatrix, self).delete(*args, **kwargs)
-
 
 
 class GCMSRawMeasurement(models.Model):
@@ -1874,14 +1976,13 @@ def construct_custom_feature_matrix_from_zip(zippath):
     """
 
     class_label_dict, feature_matrix = MccImsAnalysis.read_in_custom_feature_matrix(zip_path=zippath)
-    # name = Path(zippath).stem + Path(zippath).suffix
 
     # coerce peak detection method
     coerced_pdm = coerce_pdm_from_path(zippath)
 
     pdm_name = coerced_pdm.name
 
-    fm_fn = "{}_feature_matrix".format(pdm_name)
+    fm_fn = f"{pdm_name}_feature_matrix"
     buff = StringIO()
     feature_matrix.to_csv(buff, index=True, header=True, index_label="index")
     buff.seek(0)
@@ -1896,6 +1997,74 @@ def construct_custom_feature_matrix_from_zip(zippath):
 
     return fm.pk
 
+def construct_user_defined_feature_matrices_from_zip(zippath, user, train_val_fraction):
+    """
+    Create two `UserDefinedFeatureMatrix` - one training and one validation set
+    """
+    # FIXME
+    # feature_matrix_id = construct_custom_feature_matrix_from_zip(self.upload.path)
+    seed = 42
+    class_label_dict, fm = MccImsAnalysis.read_in_custom_feature_matrix(zip_path=zippath)#self.upload.path)
+
+    # coerce peak detection method
+    coerced_pdm = coerce_pdm_from_path(zippath)
+    pdm_name = coerced_pdm.name
+
+    base_fm_fn = f"{pdm_name}_feature_matrix.csv"
+
+    X = [k for k in class_label_dict.keys()]
+    y = [v for v in class_label_dict.values()]
+    # class_labels[m.filename]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_val_fraction, random_state=seed, stratify=y) #, shuffle=True)  # will always create same split
+
+    # labels might not be sorted
+    X_tr_args = np.argsort(X_train)
+    X_te_args = np.argsort(X_test)
+
+    X_train = np.take_along_axis(np.array(X_train), X_tr_args, axis=0)
+    X_test = np.take_along_axis(np.array(X_test), X_te_args, axis=0)
+
+    y_train = np.take_along_axis(np.array(y_train), X_tr_args, axis=0)
+    y_test = np.take_along_axis(np.array(y_test), X_te_args, axis=0)
+
+    train_df = pd.DataFrame({"name": X_train, "label": y_train})
+    test_df = pd.DataFrame({"name": X_test, "label": y_test})
+
+    tr_class_labels = OrderedDict(train_df[['name', 'label']].items())
+    te_class_labels = OrderedDict(test_df[['name', 'label']].items())
+
+    tr_fm = fm.loc[fm.index.intersection(train_df['name'])]
+    te_fm = fm.loc[fm.index.intersection(test_df['name'])]
+
+    tr_fm_fn = f"train_{base_fm_fn}"
+    te_fm_fn = f"validate_{base_fm_fn}"
+
+    tr_buff = StringIO()
+    te_buff = StringIO()
+
+    tr_fm.to_csv(tr_buff, index=True, header=True, index_label="index")
+    tr_buff.seek(0)
+
+    te_fm.to_csv(te_buff, index=True, header=True, index_label="index")
+    te_buff.seek(0)
+
+    for fm, fm_fn, buff, is_training_matrix, class_labels in zip(
+            [tr_fm, te_fm], [tr_fm_fn, te_fm_fn], [tr_buff, te_buff], [True, False], [tr_class_labels, te_class_labels]):
+        fm = UserDefinedFeatureMatrix(
+                user=user, name=fm_fn,
+                peak_detection_method_name=pdm_name,
+                file=ContentFile(buff.getvalue(), name=fm_fn, ),
+                class_label_dict=class_labels,
+                is_training_matrix=is_training_matrix,
+                is_prediction_matrix=(not is_training_matrix),
+                )
+        fm.save()
+
+    print(f"Created UserDefinedFeatureMatrices {fm.pk} and {fm.pk-1}")
+
+    return fm.pk
+
 
 def create_GCMS_peak_detection_fileset_from_zip(zippath):
     """
@@ -1905,7 +2074,7 @@ def create_GCMS_peak_detection_fileset_from_zip(zippath):
     """
     name = Path(zippath).stem + Path(zippath).suffix
 
-    # TODO coerced_pdm = coerce_pdm_from_path(zippath)   # ectend for gcms methods - eg in name zips
+    # TODO coerced_pdm = coerce_pdm_from_path(zippath)   # extend for gcms methods - eg in name zips
     coerced_pdm = GCMSPeakDetectionMethod.CUSTOM
 
     # class_label_file, pdrs = MccImsAnalysis.read_in_custom_peak_detection(zippath, pdm=coerced_pdm)
