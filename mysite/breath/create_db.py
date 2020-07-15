@@ -102,45 +102,29 @@ def add_predefined_peak_detection_filesets():
     from breathpy.model.ProcessingMethods import PeakDetectionMethod, ExternalPeakDetectionMethod
     pdms_to_include = [ExternalPeakDetectionMethod.PEAX, PeakDetectionMethod.TOPHAT, PeakDetectionMethod.VISUALNOWLAYER]
 
-
-    sets_to_avoid = {'Asbestose Train': [PeakDetectionMethod.TOPHAT, ExternalPeakDetectionMethod.PEAX],
-                     'Asbestose Test': [PeakDetectionMethod.TOPHAT, ExternalPeakDetectionMethod.PEAX],
-            }
-
     descriptions, names, archive_names, pdms = [], [], [], []
 
     for bn, bd, ban in zip(base_names, base_descriptions, base_archive_names):
         for pdm in pdms_to_include:
 
-            use = 1
-            if bn in sets_to_avoid:
-                if pdm in sets_to_avoid[bn]:
-                    use = 0
+            pdm_name = pdm.name
 
-            if use:
-                pdm_name = pdm.name
+            description_l = f"{bd} {pdm_name} "
+            name_l = bn
+            archive_nl = f"{ban[:-4]}_{pdm_name}_results.zip"
 
-                description_l = f"{bd} {pdm_name} "
-                name_l = bn
-                archive_nl = f"{ban[:-4]}_{pdm_name}_results.zip"
+            descriptions.append(description_l)
+            names.append(name_l)
+            archive_names.append(archive_nl)
+            pdms.append(pdm)
 
-                descriptions.append(description_l)
-                names.append(name_l)
-                archive_names.append(archive_nl)
-                pdms.append(pdm)
-
-    archive_paths = ['{}{}'.format(zip_folder, archive_name) for archive_name in archive_names]
-    # print(len(names), len(descriptions), len(archive_paths))
-    # print(names, descriptions, archive_paths)
-    # for i, (name, description, archive_path) in enumerate(zip(names, descriptions, archive_paths)):
-    #     print(name, description, archive_path)
+    archive_paths = [f'{zip_folder}{archive_name}' for archive_name in archive_names]
 
     for i, (name, description, archive_path, pdm) in enumerate(zip(names, descriptions, archive_paths, pdms)):
         # read in pdr - and create model instances
 
-        # PredefinedCustomPeakDetectionFileSet.objects
-        # try:
-        predefined_fileset = PredefinedCustomPeakDetectionFileSet(name=name, description=description, upload=archive_path, class_label_processed_id_dict=initial_label)
+        predefined_fileset = PredefinedCustomPeakDetectionFileSet(
+                    name=name, description=description, upload=archive_path, class_label_processed_id_dict=initial_label)
         predefined_fileset.save()
 
         # move to db - create fileField - then get path from that to create pdrs
@@ -191,7 +175,8 @@ def add_predefined_gcms_filesets():
     base_archive_names = [
                      'train_algae.zip', 'test_algae.zip',
                      ]
-
+    # train val ratio
+    # 4/15 = 0.266
     from breathpy.model.ProcessingMethods import GCMSPeakDetectionMethod
     pdms_to_include = [GCMSPeakDetectionMethod.ISOTOPEWAVELET]
     sets_to_avoid = []

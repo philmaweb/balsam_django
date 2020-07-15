@@ -1,0 +1,13 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+
+    <h2>Upload your own dataset</h2>
+
+    {% load crispy_forms_tags %}
+
+    <div class="row justify-content-center">
+        {% crispy form form.helper %}
+    </div>
+
+{% endblock %}

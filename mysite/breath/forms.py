@@ -21,7 +21,9 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Field, Layout, Fieldset, ButtonHolder, Button, Div, HTML
 from crispy_forms.bootstrap import AppendedText, PrependedAppendedText, PrependedText, TabHolder, Tab, FormActions
 
-from .models import (WebPredictionModel, ZipFileValidator, PredefinedFileset, PredefinedCustomPeakDetectionFileSet,
+from .models import (WebPredictionModel, ZipFileValidator,
+                     PredefinedFileset, PredefinedCustomPeakDetectionFileSet,
+                     UserDefinedFileset, UserDefinedFeatureMatrix, AnalysisType,
                      GCMSFileSet, GCMSPeakDetectionFileSet, GCMSPeakDetectionResult,
                      GCMSPredefinedPeakDetectionFileSet, create_GCMS_peak_detection_fileset_from_zip, create_gcms_fileset_from_zip)
 
@@ -36,7 +38,7 @@ from breathpy.model.BreathCore import (
     MccImsAnalysis, construct_custom_processing_evaluation_dict,
     GCMSAnalysis,
 )
-
+from breathpy.generate_sample_data import split_labels_ratio, write_raw_files_to_zip
 
 REVIEW_OPTIONS = ['', 'DATASET', 'PROCESSING_STEPS']
 
@@ -1049,15 +1051,9 @@ class CustomDetectionAnalysisForm(forms.Form):
         help_text="Gridwidth factor for retention time.",
     )
 
-    # added clustering options
-    # added feature matrix support
-    # added example files
-
     def __init__(self, *args, **kwargs):
         super(CustomDetectionAnalysisForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-
-        # pdm_name = "CUSTOM"
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -1187,6 +1183,88 @@ class CustomDetectionAnalysisForm(forms.Form):
             return False
 
 
+class UploadUserDatasetForm(forms.Form):
+    """
+    Handle creation process of dataset for website from zipfile with class labels, feature matrix or raw files
+    2GB limit for user file - raw files can be huge even if compressed
+    """
+    user_file = forms.FileField(
+        required=False,
+        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=True,
+                                     check_layer_file=True,
+                                     check_peak_detection_results=True, check_gcms_raw=True,
+                                     )],
+        label="Your Dataset",
+        help_text="\nPlease upload a zip archive containing the class_labels file, raw files or feature matrix for further analysis.",
+    )
+
+    analysis_type = forms.TypedChoiceField(
+        required=True,
+        label="Type of Dataset",
+        choices=AnalysisType.choices(),
+        # coerce=lambda x: GCMSProcessingForm._coerce_peak_detection(x),
+        # initial=[GCMSPeakDetectionMethod.CENTROIDED],
+    )
+
+    train_val_ratio = forms.FloatField(
+        required=True,
+        initial=.80,  # would be approximate to 5 fold split
+        min_value=.05,
+        max_value=.95,
+    )
+
+    def clean(self):
+        # TODO test me
+        #  can also raise validation errors from here - doesnt need to be in Validator with access to single field
+        # need user context for validation - so create model in view
+
+        my_user_file = self.cleaned_data.get('user_file')
+        if my_user_file:
+
+            # Store to disk
+            if isinstance(my_user_file, InMemoryUploadedFile):
+
+                filename = my_user_file.name  # received file name
+                file_obj = my_user_file
+                target_path = default_storage.path('tmp/')
+                if not os.path.exists(target_path):
+                    os.mkdir(target_path)
+
+                with default_storage.open('tmp/' + filename, 'wb+') as destination:
+                    for chunk in file_obj.chunks():
+                        destination.write(chunk)
+
+                zip_file_path = Path(target_path).joinpath(filename)
+            else:
+                zip_file_path = my_user_file.temporary_file_path()
+
+            # check whether split ratio is possible
+
+            try:
+                with zipfile.ZipFile(zip_file_path) as tmp_archvie:
+                    class_label_fn = MccImsAnalysis.guess_class_label_extension("", tmp_archvie.namelist())
+                    class_label_dict = MccImsAnalysis.parse_class_labels_from_ZipFile(zip_file_path, class_label_fn)
+                    split_labels_ratio(class_label_dict, self.split_ratio)
+            except ValueError:
+                raise ValidationError("Bad split ratio. Need at least one sample per class, both in training and validation set.")
+
+        return self.cleaned_data
+
+    @staticmethod
+    def does_contain_feature_matrix(zip_path, fm_suffix="_feature_matrix.csv"):
+        """
+        Check whether contains feature matrix - if yes it has priority further downstream
+        :param zip_path:
+        :return:
+        """
+        fm_fn = ""
+        with zipfile.ZipFile(zip_path) as archive:
+            fm_fn = [filename for filename in archive.namelist() if str.endswith(filename, fm_suffix)]
+        if fm_fn:
+            return True
+        else:
+            return False
+
 
 
 class CustomPredictionForm(forms.Form):
@@ -1215,7 +1293,7 @@ class CustomPredictionForm(forms.Form):
         help_text="\nPlease upload a zip archive containing the peak detection results for further analysis. Optionally add a class_labels.csv file to the archive.",
     )
 
-    # ORDER of the arguments is extremely important - can't have a default value before *args - will fail misarbly without error
+    # ORDER of the arguments is extremely important - can't have a default value before *args - will fail miserably without error
     def __init__(self, web_prediction_model_key, *args, training_model_description="", **kwargs):
         super(CustomPredictionForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()

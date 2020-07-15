@@ -1,0 +1,84 @@
+{% extends 'breath/base.html' %}
+
+{% block content %}
+    <h2>Datasets</h2>
+
+    <a href="{% url 'upload_dataset' %}">
+        <button type="button" class="btn btn-primary btn-lg">
+            Upload new Dataset <span class="glyphicon glyphicon-upload"></span>
+        </button>
+    </a>
+
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Date Uploaded</th>
+            <th>Dataset Type</th>
+            <th>Split Ratio</th>
+            <th>Download</th>
+            <th>Origin</th>
+        </tr>
+    </thead>
+    <tbody>
+    <!--  Feature Matrices  -->
+    {% if user_fms %}
+        {% for user_fm in user_fms %}
+            <tr>
+                <td>{{user_fm.name}}</td>
+                <td>{{user_fm.description}}</td>
+                <td>{{user_fm.uploaded_at}}</td>
+                <td>{{user_fm.analysis_type}}</td>
+                <td>{{user_fm.split_ratio}}</td>
+                <td><a href="{% url 'download_user_feature_matrix_csv' user_fm.pk %}">
+                        <span class="glyphicon glyphicon-download"></span>
+                    </a></td>
+                <td>User defined <a href="{% url 'delete_feature_matrix' user_fm.pk %}">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+    {% endif %}
+
+    <!--  Filesets  -->
+    {% if user_fss %}
+        {% for user_fs in user_fss %}
+            <tr>
+                <td>{{user_fs.name}}</td>
+                <td>{{user_fs.description}}</td>
+                <td>{{user_fs.uploaded_at}}</td>
+                <td>{{user_fs.analysis_type}}</td>
+                <td>{{user_fs.split_ratio}}</td>
+                <td><a href="{% url 'download_user_fileset_zip' user_fs.pk %}">
+                        <span class="glyphicon glyphicon-download"></span>
+                    </a></td>
+                <td>User defined
+                    <a href="{% url 'delete_fileset' user_fs.pk %}">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+    {% endif %}
+
+    <!--  Builtin Filesets  -->
+    {% if default_fss %}
+        {% for default_fs in default_fss %}
+            <tr>
+                <td>{{default_fs.name}}</td>
+                <td>{{default_fs.description}}</td>
+                <td>{{default_fs.uploaded_at}}</td>
+                <td>{{default_fs.analysis_type}}</td>
+                <td>{{default_fs.split_ratio}}</td>
+                <td><a href="{% url 'download_default_fileset_zip' default_fs.pk %}">
+                        <span class="glyphicon glyphicon-download"></span>
+                    </a></td>
+                <td>default</td>
+            </tr>
+        {% endfor %}
+    {% endif %}
+    </tbody>
+
+{% endblock %}
+

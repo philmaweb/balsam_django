@@ -2,7 +2,7 @@ from collections import Counter
 from pathlib import Path
 import numpy as np
 from io import StringIO, BytesIO
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from django.shortcuts import render, redirect, get_object_or_404, reverse, render_to_response, HttpResponse
 from django.core.exceptions import FieldDoesNotExist
@@ -37,13 +37,16 @@ from .forms import (ProcessingStepsForm,
                     AnalysisFormMatcher,
                     CustomDetectionAnalysisForm,
                     SignUpForm,
+                    UploadUserDatasetForm,
                     )
 from .models import (
-                     TempUser, TempUserManager,
-                     MccImsAnalysisWrapper, WebImsSet, FileSet, WebCustomSet,
-                     HeatmapPlotModel, IntensityPlotModel, OverlayPlotModel, ClusterPlotModel, BestFeaturesOverlayPlot, ClasswiseHeatMapPlotModel,
-                     RocPlotModel, BoxPlotModel, FeatureMatrix,
-                     WebPredictionModel, ClassPredictionFileSet, PredictionResult, StatisticsModel, DecisionTreePlotModel,
+                    TempUser, TempUserManager,
+                    MccImsAnalysisWrapper, WebImsSet, FileSet, WebCustomSet,
+                    HeatmapPlotModel, IntensityPlotModel, OverlayPlotModel, ClusterPlotModel, BestFeaturesOverlayPlot, ClasswiseHeatMapPlotModel,
+                    RocPlotModel, BoxPlotModel, FeatureMatrix,
+                    WebPredictionModel, ClassPredictionFileSet, PredictionResult, StatisticsModel, DecisionTreePlotModel,
+                    AnalysisType, UserDefinedFileset, UserDefinedFeatureMatrix, PredefinedFileset,
+                    construct_user_defined_feature_matrices_from_zip, construct_user_defined_fileset_from_zip,
                     )
 
 def update_user_context_from_request(request, context):
@@ -181,6 +184,70 @@ def signup(request):
 #     }
 #
 #     return render(request, template_name, context=context)
+
+
+@temp_or_login_required
+def list_datasets(request, user):
+    # remove old database entries
+    clean_up(30)
+
+    template_name = 'breath/list_datasets.html'
+    context = {'active_page': 'datasets',
+               }
+    context = if_temp_update_context(user=user, context=context)
+
+    # TODO prep filesets for context
+    user_fms = UserDefinedFeatureMatrix.objects.filter(user=user)
+    user_fss = UserDefinedFileset.objects.filter(user=user)
+    default_fss = PredefinedFileset.objects.all()
+    # FIXME extend with available GCMSPredefinedPeakDetectionFileSet
+
+    context['user_fms'] = user_fms
+    context['user_fss'] = user_fss
+    context['default_fss'] = default_fss
+
+    return render(request, template_name, context)
+
+
+@temp_or_login_required
+def upload_dataset(request, user):
+    # remove old database entries
+    clean_up(30)
+
+    template_name = 'breath/upload_dataset.html'
+    context = {'active_page': 'datasets',
+               }
+    context = if_temp_update_context(user=user, context=context)
+
+    if request.method == "POST" and request.FILES:
+        upload_form = UploadUserDatasetForm(request.POST, request.FILES)
+    # if GET or other request create default form
+    else:
+        upload_form = UploadUserDatasetForm()
+        context['form'] = upload_form
+        return render(request, template_name, context)
+
+    if upload_form.is_valid():
+
+        # distinguish on user selection
+        if upload_form.cleaned_data['analysis_type'] == AnalysisType.FEATURE_MATRIX:
+            construct_user_defined_feature_matrices_from_zip(
+                zippath=upload_form.user_file.path, user=user, train_val_ratio=upload_form.cleaned_data['split_ratio'],
+                name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
+            )
+        if upload_form.cleaned_data['analysis_type'] == AnalysisType.RAW_MCC_IMS:
+            construct_user_defined_fileset_from_zip(
+                zippath=upload_form.user_file.path, user=user, train_val_ratio=upload_form.cleaned_data['split_ratio'],
+                name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
+            )
+        if upload_form.cleaned_data['analysis_type'] == AnalysisType.RAW_GC_MS:
+            # TODO implement me
+            pass
+        return redirect('list_datasets')
+    else:
+        context['form'] = upload_form
+    return render(request, template_name, context)
+
 
 @temp_or_login_required
 def run(request, user):
@@ -759,61 +826,6 @@ def analysis(request, analysis_id, user):
     return render(request, template_name, context=context)
 
 
-# @temp_or_login_required
-# def downloads(request, user):
-#     template_name = 'breath/downloads.html'
-#     context = {'active_page': 'downloads',
-#                }
-#
-#     # get list of all analysis associated with user
-#     # get downloadable files from DB for each of them:
-#     #   Data:
-#     # 		TrainingMatrices -> DataTable instances
-#     # 		Statistics dfs -> DataTable random Forest evaluation
-#     # 		PredictionResult -> DataTable
-#     # 	Model:
-#     # 		RandomForest model - pickle
-#     # 	Plots?
-#     # if not mcc_ims_analysis_wrapper.user == user:
-#     #     return HttpResponseForbidden()
-#
-#     context = if_temp_update_context(user=user, context=context)
-#     analysis_qs = MccImsAnalysisWrapper.objects.filter(user=user).order_by('ims_set__upload')
-#     analysis_ids = [analysis.pk for analysis in analysis_qs]
-#     context['analysis_ids'] = analysis_ids
-#
-#     # analysis_qs = MccImsAnalysisWrapper.objects.filter(user=user)
-#     context = if_temp_update_context(user=user, context=context)
-#
-#
-#     prediction_results = []
-#
-#     #  get all DataTables
-#     for analysis_wrapper in analysis_qs:
-#         web_prediction_model = get_object_or_404(WebPredictionModel, mcc_ims_analysis=analysis_wrapper)
-#         # get all results associated with web_prediciton model
-#         prediction_result_qs = PredictionResult.objects.all().filter(web_prediction_model=web_prediction_model.pk)
-#
-#         result_dicts = []
-#         for pr in prediction_result_qs:
-#             orig_labels = {}
-#             if pr.original_class_labels:
-#                 orig_labels = pr.original_class_labels
-#             result_dicts.append({
-#                 # add orig_label default "" to match new table style
-#                 "class_assignment": [(m_name, label, orig_labels.get(m_name, "")) for m_name, label in
-#                                      pr.class_assignment.items()],
-#                 "peak_detection_method_name": pr.peak_detection_method_name,
-#             })
-#         #  get Peak Intensities
-#         #  get Features
-#
-#         # prediction_results[analysis_wrapper.pk] = result_dicts
-#         prediction_results.append((analysis_wrapper.pk, result_dicts))
-#     context['prediction_results_list'] = prediction_results
-#
-#     return render(request, template_name, context=context)
-
 @temp_or_login_required
 def predictor_pickle_download(request, analysis_id, user):
     # get location? of TrainingsMatrix, statisticsDF, PredictionResult and PredictionModel matching analysis_id
@@ -1170,14 +1182,14 @@ class PlotRetriever(object):
 
         return rv
 
-    def get_zip_of_plots_of_analysis(self, model_instance_list):
+    def get_zip_of_plot_models(self, model_instance_list):
         """
         Zip plots for analysis into single archive
-        :param analysis_id:
+        :param model_instance_list:
         :return: zip-archive
         """
         zip_buffer = BytesIO()
-        with ZipFile(zip_buffer, "w") as zip_out:
+        with ZipFile(zip_buffer, ZIP_DEFLATED, "w") as zip_out:
             for model_instance in model_instance_list:
                 plot_qs = model_instance.objects.all().filter(analysis=self.analysis_id)
                 for plot_model in plot_qs:
@@ -1542,7 +1554,7 @@ def get_plot_archive(request, analysis_id, user):
     pr = PlotRetriever(analysis_id)
     plot_model_instances = [ClusterPlotModel, ClasswiseHeatMapPlotModel, BestFeaturesOverlayPlot, RocPlotModel,
                             BoxPlotModel, DecisionTreePlotModel]
-    response = HttpResponse(pr.get_zip_of_plots_of_analysis(plot_model_instances).getvalue(), content_type="application/zip")
+    response = HttpResponse(pr.get_zip_of_plot_models(plot_model_instances).getvalue(), content_type="application/zip")
     response['Content-Disposition'] = f'attachment; filename=plots_analysis_{analysis_id}.zip'
     return response
 
@@ -1565,3 +1577,72 @@ def task_status(request, task_id):
                               'exc': get_full_cls_name(retval.__class__),
                               'traceback': traceback})
     return JsonResponse({'task': response_data})
+
+@temp_or_login_required
+def delete_user_fileset(request, user, fs_id):
+    """
+    Delete a user owned fileset
+    """
+    # make sure user is allowed to access the fileset
+    udfs = get_object_or_404(UserDefinedFileset, pk=fs_id, user=user)
+    udfs.delete()
+    return None
+
+
+@temp_or_login_required
+def delete_user_feature_matrix(request, user, fm_id):
+    """
+    Delete a user owned feature matrix
+    """
+    # make sure user is allowed to access the fileset
+    udfm = get_object_or_404(UserDefinedFeatureMatrix, pk=fm_id, user=user)
+    udfm.delete()
+    return None
+
+
+@temp_or_login_required
+def download_user_feature_matrix_csv(request, fm_id, user):
+    fm_object = UserDefinedFeatureMatrix.objects.get(pk=fm_id)
+    # ensure user is authorized to view
+    if not user == fm_object.user:
+        return HttpResponseForbidden()
+
+    fm = fm_object.get_feature_matrix()
+
+    buffer = StringIO()
+    fm.to_csv(buffer, index=True, header=True, index_label="index")
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='text/csv')
+
+    if fm_object.is_training_matrix:
+        train_test_prefix = "train"
+    else:
+        train_test_prefix = "test"
+    response['Content-Disposition'] = f'attachment; filename={train_test_prefix}_{fm_object.name}.csv'
+
+    return response
+
+@temp_or_login_required
+def download_user_fileset_zip(request, fs_id, user):
+    # make sure user is allowed to access the analysis
+    fs = get_object_or_404(UserDefinedFileset, pk=fs_id)
+    if not user == fs.user:
+        return HttpResponseForbidden()
+
+    # response = HttpResponse(fs.get_zip.getvalue(), content_type="application/zip")
+    response = HttpResponse(fs.get_zip(), content_type="application/zip")
+    response['Content-Disposition'] = f'attachment; filename=user_fileset_{fs_id}.zip'
+    return response
+
+
+@temp_or_login_required
+def download_default_fileset_zip(request, fs_id, user):
+    # make sure user is allowed to access the analysis
+    fs = get_object_or_404(PredefinedFileset, pk=fs_id)
+    # anyone can get the predefined sets
+
+    # response = HttpResponse(fs.get_zip.getvalue(), content_type="application/zip")
+    response = HttpResponse(fs.upload.read(), content_type="application/zip")
+    response['Content-Disposition'] = f'attachment; filename=default_fileset_{fs_id}.zip'
+    return response
