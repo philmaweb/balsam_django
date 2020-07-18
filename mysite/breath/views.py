@@ -45,7 +45,7 @@ from .models import (
                     HeatmapPlotModel, IntensityPlotModel, OverlayPlotModel, ClusterPlotModel, BestFeaturesOverlayPlot, ClasswiseHeatMapPlotModel,
                     RocPlotModel, BoxPlotModel, FeatureMatrix,
                     WebPredictionModel, ClassPredictionFileSet, PredictionResult, StatisticsModel, DecisionTreePlotModel,
-                    AnalysisType, UserDefinedFileset, UserDefinedFeatureMatrix, PredefinedFileset,
+                    AnalysisType, UserDefinedFileset, UserDefinedFeatureMatrix, PredefinedFileset, PredefinedCustomPeakDetectionFileSet,
                     construct_user_defined_feature_matrices_from_zip, construct_user_defined_fileset_from_zip,
                     )
 
@@ -199,7 +199,8 @@ def list_datasets(request, user):
     # TODO prep filesets for context
     user_fms = UserDefinedFeatureMatrix.objects.filter(user=user)
     user_fss = UserDefinedFileset.objects.filter(user=user)
-    default_fss = PredefinedFileset.objects.all()
+    default_fss = list(PredefinedFileset.objects.all())
+    default_fss.extend(PredefinedCustomPeakDetectionFileSet.objects.all())
     # FIXME extend with available GCMSPredefinedPeakDetectionFileSet
 
     context['user_fms'] = user_fms
@@ -226,23 +227,25 @@ def upload_dataset(request, user):
         upload_form = UploadUserDatasetForm()
         context['form'] = upload_form
         return render(request, template_name, context)
-
     if upload_form.is_valid():
-
+        print(upload_form.cleaned_data.get('zip_file_path'))
+        # model needs user - so is created in view instead of in form
         # distinguish on user selection
-        if upload_form.cleaned_data['analysis_type'] == AnalysisType.FEATURE_MATRIX:
+        if upload_form.cleaned_data['analysis_type'] == AnalysisType.FEATURE_MATRIX.name:
             construct_user_defined_feature_matrices_from_zip(
-                zippath=upload_form.user_file.path, user=user, train_val_ratio=upload_form.cleaned_data['split_ratio'],
+                zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_fraction'],
                 name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
             )
-        if upload_form.cleaned_data['analysis_type'] == AnalysisType.RAW_MCC_IMS:
+        if upload_form.cleaned_data['analysis_type'] == AnalysisType.RAW_MCC_IMS.name:
             construct_user_defined_fileset_from_zip(
-                zippath=upload_form.user_file.path, user=user, train_val_ratio=upload_form.cleaned_data['split_ratio'],
+                zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_fraction'],
                 name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
+                analysis_type=upload_form.cleaned_data['analysis_type'],
             )
         if upload_form.cleaned_data['analysis_type'] == AnalysisType.RAW_GC_MS:
             # TODO implement me
             pass
+        # TODO remove upload_form.cleaned_data['zip_file_path'] - is it temporary or does it persist if InMemory?
         return redirect('list_datasets')
     else:
         context['form'] = upload_form
@@ -1586,7 +1589,7 @@ def delete_user_fileset(request, user, fs_id):
     # make sure user is allowed to access the fileset
     udfs = get_object_or_404(UserDefinedFileset, pk=fs_id, user=user)
     udfs.delete()
-    return None
+    return redirect('list_datasets')
 
 
 @temp_or_login_required
@@ -1597,7 +1600,7 @@ def delete_user_feature_matrix(request, user, fm_id):
     # make sure user is allowed to access the fileset
     udfm = get_object_or_404(UserDefinedFeatureMatrix, pk=fm_id, user=user)
     udfm.delete()
-    return None
+    return redirect('list_datasets')
 
 
 @temp_or_login_required
@@ -1632,7 +1635,11 @@ def download_user_fileset_zip(request, fs_id, user):
 
     # response = HttpResponse(fs.get_zip.getvalue(), content_type="application/zip")
     response = HttpResponse(fs.get_zip(), content_type="application/zip")
-    response['Content-Disposition'] = f'attachment; filename=user_fileset_{fs_id}.zip'
+    if fs.is_train:
+        train_val_str = "train"
+    else:
+        train_val_str = "validate"
+    response['Content-Disposition'] = f'attachment; filename=user_fileset_{fs_id}_{fs.name.replace(" ","")}_{train_val_str}.zip'
     return response
 
 

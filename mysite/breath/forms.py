@@ -12,7 +12,6 @@ from django.contrib.auth.models import User
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from django.utils.translation import ugettext_lazy as _
@@ -21,9 +20,10 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Field, Layout, Fieldset, ButtonHolder, Button, Div, HTML
 from crispy_forms.bootstrap import AppendedText, PrependedAppendedText, PrependedText, TabHolder, Tab, FormActions
 
-from .models import (WebPredictionModel, ZipFileValidator,
+from .models import (WebPredictionModel, ZipFileValidator, UserDatasetZipFileValidator,
                      PredefinedFileset, PredefinedCustomPeakDetectionFileSet,
                      UserDefinedFileset, UserDefinedFeatureMatrix, AnalysisType,
+                     construct_user_defined_fileset_from_zip, construct_user_defined_feature_matrices_from_zip,
                      GCMSFileSet, GCMSPeakDetectionFileSet, GCMSPeakDetectionResult,
                      GCMSPredefinedPeakDetectionFileSet, create_GCMS_peak_detection_fileset_from_zip, create_gcms_fileset_from_zip)
 
@@ -37,6 +37,7 @@ from breathpy.model.GCMSTools import (filter_mzml_or_mzxml_filenames, filter_fea
 from breathpy.model.BreathCore import (
     MccImsAnalysis, construct_custom_processing_evaluation_dict,
     GCMSAnalysis,
+    InvalidLayerFileError,
 )
 from breathpy.generate_sample_data import split_labels_ratio, write_raw_files_to_zip
 
@@ -95,15 +96,15 @@ class WebImsSetForm(forms.Form):
 
                 filename = zip_file.name  # received file name
                 file_obj = zip_file
-                target_path = default_storage.path('tmp/')
-                if not os.path.exists(target_path):
-                    os.mkdir(target_path)
 
-                with default_storage.open('tmp/' + filename, 'wb+') as destination:
+                target_dir = tempfile.gettempdir()
+
+                target_path = Path(target_dir) / filename
+                with open(target_path, 'wb+') as destination:
                     for chunk in file_obj.chunks():
                         destination.write(chunk)
 
-                self.cleaned_data['zip_file_path'] = target_path + filename
+                self.cleaned_data['zip_file_path'] = target_path
             else:
                 self.cleaned_data['zip_file_path'] = zip_file.temporary_file_path()
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, PredefinedFileset):
@@ -1102,15 +1103,14 @@ class CustomDetectionAnalysisForm(forms.Form):
 
                 filename = my_user_file.name  # received file name
                 file_obj = my_user_file
-                target_path = default_storage.path('tmp/')
-                if not os.path.exists(target_path):
-                    os.mkdir(target_path)
+                target_dir = tempfile.gettempdir()
 
-                with default_storage.open('tmp/' + filename, 'wb+') as destination:
+                target_path = Path(target_dir) / filename
+                with open(target_path, 'wb+') as destination:
                     for chunk in file_obj.chunks():
                         destination.write(chunk)
 
-                zip_file_path = Path(target_path).joinpath(filename)
+                zip_file_path = Path(target_path)
             else:
                 zip_file_path = my_user_file.temporary_file_path()
 
@@ -1189,29 +1189,35 @@ class UploadUserDatasetForm(forms.Form):
     2GB limit for user file - raw files can be huge even if compressed
     """
     user_file = forms.FileField(
-        required=False,
-        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=True,
-                                     check_layer_file=True,
-                                     check_peak_detection_results=True, check_gcms_raw=True,
-                                     )],
+        required=True,
+        validators=[UserDatasetZipFileValidator(max_size=2000 * 1024 * 1024)],
         label="Your Dataset",
-        help_text="\nPlease upload a zip archive containing the class_labels file, raw files or feature matrix for further analysis.",
+        help_text="\nPlease upload a zip archive containing the class_labels file, raw files or feature matrix for further analysis. Also see <a href=/documentation#file_formats>documentation#file_formats</a>.",
     )
 
     analysis_type = forms.TypedChoiceField(
         required=True,
-        label="Type of Dataset",
+        label="Type of dataset",
         choices=AnalysisType.choices(),
-        # coerce=lambda x: GCMSProcessingForm._coerce_peak_detection(x),
-        # initial=[GCMSPeakDetectionMethod.CENTROIDED],
+        initial=AnalysisType.FEATURE_MATRIX.name,
     )
 
-    train_val_ratio = forms.FloatField(
+    train_validation_fraction = forms.FloatField(
         required=True,
         initial=.80,  # would be approximate to 5 fold split
         min_value=.05,
         max_value=.95,
+        label="Dataset training fraction",
+        help_text="This value specifies the fraction of the dataset used for training. I.e. when choosing 0.8, the dataset is split such that 80% of samples are used for training and 20% for validation."
     )
+    name = forms.CharField(max_length=30, required=True)
+    description = forms.CharField(max_length=30, required=False, help_text='Optional')
+
+    def __init__(self, *args, **kwargs):
+        super(UploadUserDatasetForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Upload'))
 
     def clean(self):
         # TODO test me
@@ -1219,35 +1225,68 @@ class UploadUserDatasetForm(forms.Form):
         # need user context for validation - so create model in view
 
         my_user_file = self.cleaned_data.get('user_file')
-        if my_user_file:
+        if not my_user_file:
+            raise ValidationError("Didn't recognize a zip archive.")
 
-            # Store to disk
-            if isinstance(my_user_file, InMemoryUploadedFile):
+        # Store to disk
+        if isinstance(my_user_file, InMemoryUploadedFile):
 
-                filename = my_user_file.name  # received file name
-                file_obj = my_user_file
-                target_path = default_storage.path('tmp/')
-                if not os.path.exists(target_path):
-                    os.mkdir(target_path)
+            filename = my_user_file.name  # received file name
+            file_obj = my_user_file
 
-                with default_storage.open('tmp/' + filename, 'wb+') as destination:
-                    for chunk in file_obj.chunks():
-                        destination.write(chunk)
+            target_dir = tempfile.gettempdir()
+            target_path = Path(target_dir)/filename
+            with open(target_path, 'wb+') as destination:
+                for chunk in file_obj.chunks():
+                    destination.write(chunk)
 
-                zip_file_path = Path(target_path).joinpath(filename)
-            else:
-                zip_file_path = my_user_file.temporary_file_path()
+            zip_file_path = Path(target_path)
+        else:
+            zip_file_path = my_user_file.temporary_file_path()
 
+        with zipfile.ZipFile(zip_file_path) as tmp_archvie:
             # check whether split ratio is possible
-
             try:
-                with zipfile.ZipFile(zip_file_path) as tmp_archvie:
-                    class_label_fn = MccImsAnalysis.guess_class_label_extension("", tmp_archvie.namelist())
-                    class_label_dict = MccImsAnalysis.parse_class_labels_from_ZipFile(zip_file_path, class_label_fn)
-                    split_labels_ratio(class_label_dict, self.split_ratio)
-            except ValueError:
-                raise ValidationError("Bad split ratio. Need at least one sample per class, both in training and validation set.")
+                class_label_fn = MccImsAnalysis.guess_class_label_extension("", tmp_archvie.namelist())
+                class_label_dict = MccImsAnalysis.parse_class_labels_from_ZipFile(tmp_archvie, class_label_fn)
+                split_labels_ratio(class_label_dict, self.cleaned_data['train_validation_fraction'])
 
+            except ValueError:
+                raise ValidationError("Bad train to validation fraction. Need at least one sample per class, both in training and validation set.")
+
+        # do additional validation dependent on AnalysisType
+            ####### RAW_MCC_IMS
+            print(self.cleaned_data['analysis_type'])
+            if self.cleaned_data['analysis_type'] == AnalysisType.RAW_MCC_IMS.name:
+                validator = UserDatasetZipFileValidator(check_layer_file=True)
+                validator.check_validity_analysis_type(zip_handle=tmp_archvie, analysis_type=AnalysisType.RAW_MCC_IMS)
+
+                potential_layer_file = MccImsAnalysis.check_for_peak_layer_file(zip_file_path)
+                if potential_layer_file:
+                    try:
+                        MccImsAnalysis.parse_peak_layer(f"{zip_file_path}/{potential_layer_file}")
+                    # except FileNotFoundError:  # no error, just doesnt contain a layer file
+                    except InvalidLayerFileError as ilfe:
+                        params = {'contains_layer_file': False}
+                        raise ValidationError(str(ilfe), 'contains_layer_file', params)
+                    except ValueError:
+                        params = {'contains_layer_file': False}
+                        raise ValidationError(
+                            validator.error_messages['contains_layer_file'], 'contains_layer_file', params)
+
+            ####### FEATURE_MATRIX
+            if self.cleaned_data['analysis_type'] == AnalysisType.FEATURE_MATRIX.name:
+                validator = UserDatasetZipFileValidator()
+                validator.check_validity_analysis_type(zip_handle=tmp_archvie, analysis_type=AnalysisType.FEATURE_MATRIX)
+
+            ####### RAW_GC_MS
+            if self.cleaned_data['analysis_type'] == AnalysisType.RAW_GC_MS.name:
+                validator = UserDatasetZipFileValidator()
+                validator.check_validity_analysis_type(zip_handle=tmp_archvie,
+                                                       analysis_type=AnalysisType.RAW_GC_MS)
+
+            # After checks pass filepath to cleaned data
+            self.cleaned_data['zip_file_path'] = zip_file_path
         return self.cleaned_data
 
     @staticmethod
@@ -1264,7 +1303,6 @@ class UploadUserDatasetForm(forms.Form):
             return True
         else:
             return False
-
 
 
 class CustomPredictionForm(forms.Form):
@@ -1341,15 +1379,14 @@ class CustomPredictionForm(forms.Form):
 
                 filename = my_user_file.name  # received file name
                 file_obj = my_user_file
-                target_path = default_storage.path('tmp/')
-                if not os.path.exists(target_path):
-                    os.mkdir(target_path)
 
-                with default_storage.open('tmp/' + filename, 'wb+') as destination:
+                target_dir = tempfile.gettempdir()
+                target_path = Path(target_dir) / filename
+                with open(target_path, 'wb+') as destination:
                     for chunk in file_obj.chunks():
                         destination.write(chunk)
 
-                zip_file_path = Path(target_path).joinpath(filename)
+                zip_file_path = Path(target_path)
             else:
                 zip_file_path = my_user_file.temporary_file_path()
 
@@ -1443,15 +1480,14 @@ class GCMSAnalysisForm(forms.Form):
 
                 filename = my_user_file.name  # received file name
                 file_obj = my_user_file
-                target_path = default_storage.path('tmp/')
-                if not os.path.exists(target_path):
-                    os.mkdir(target_path)
 
-                with default_storage.open('tmp/' + filename, 'wb+') as destination:
+                target_dir = tempfile.gettempdir()
+                target_path = Path(target_dir) / filename
+                with open(target_path, 'wb+') as destination:
                     for chunk in file_obj.chunks():
                         destination.write(chunk)
 
-                zip_file_path = Path(target_path).joinpath(filename)
+                zip_file_path = Path(target_path)
             else:
                 zip_file_path = my_user_file.temporary_file_path()
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, GCMSPredefinedPeakDetectionFileSet):
@@ -1902,15 +1938,14 @@ class GCMSPredictionForm(forms.Form):
 
                 filename = my_user_file.name  # received file name
                 file_obj = my_user_file
-                target_path = default_storage.path('tmp/')
-                if not os.path.exists(target_path):
-                    os.mkdir(target_path)
+                target_dir = tempfile.gettempdir()
 
-                with default_storage.open('tmp/' + filename, 'wb+') as destination:
+                target_path = Path(target_dir) / filename
+                with open(target_path, 'wb+') as destination:
                     for chunk in file_obj.chunks():
                         destination.write(chunk)
 
-                zip_file_path = Path(target_path).joinpath(filename)
+                zip_file_path = Path(target_path)
             else:
                 zip_file_path = my_user_file.temporary_file_path()
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, GCMSPredefinedPeakDetectionFileSet):

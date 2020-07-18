@@ -37,10 +37,10 @@ urlpatterns = [
     path('upload_dataset', views.upload_dataset, name='upload_dataset'),
 
     # delete user defined fileset
-    path('delete_user_fileset', views.delete_user_fileset, name='delete_user_fileset'),
+    path('delete_user_fileset/<int:fs_id>', views.delete_user_fileset, name='delete_user_fileset'),
 
     # delete user defined feature matrix
-    path('delete_user_fileset', views.delete_user_feature_matrix, name='delete_user_fileset'),
+    path('delete_user_feature_matrix/<int:fm_id>', views.delete_user_feature_matrix, name='delete_user_feature_matrix'),
 
     # ex: /run/ # select between mccims and gcms
     path('run', views.run, name='run'),
@@ -153,8 +153,8 @@ urlpatterns = [
     path('get_trainings_matrix_as_csv/<int:fm_id>', views.get_trainings_matrix_as_csv, name='get_trainings_matrix_as_csv'),
 
     path('download_user_feature_matrix_csv/<int:fm_id>', views.download_user_feature_matrix_csv, name='download_user_feature_matrix_csv'),
-    path('download_user_fileset_zip/<int:fm_id>', views.download_user_fileset_zip, name='download_user_fileset_zip'),
-    path('download_default_fileset_zip/<int:fm_id>', views.download_default_fileset_zip, name='download_default_fileset_zip'),
+    path('download_user_fileset_zip/<int:fs_id>', views.download_user_fileset_zip, name='download_user_fileset_zip'),
+    path('download_default_fileset_zip/<int:fs_id>', views.download_default_fileset_zip, name='download_default_fileset_zip'),
 
     path('get_plots_as_archive/<int:analysis_id>', views.get_plot_archive, name='get_plots_as_archive'),
 ]

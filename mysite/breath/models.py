@@ -144,6 +144,7 @@ class ZipFileValidator(object):
         'peak_detection_results': "Could not parse provided peak detection results.",
         'too_many_feature_matrices': "Too many feature matrices provided. Please add only a single feature matrix.",
         'feature_matrix': "Could not parse provided feature matrix.",
+        'no_feature_matrix_found': "No feature matrix found. If choosing 'FEAUTURE_MATRIX', zip archive needs to contain a file ending with 'feature_matrix.csv'.",
         'feature_matrix_shape': "Feature matrix does not contain enough rows for cross validation. Need at least 2 rows (samples) and 1 column (features).",
         'feature_matrix_labels': "Feature matrix rows do not match the order of class labels. Both need to be ordered alphabetically.",
     }
@@ -194,7 +195,6 @@ class ZipFileValidator(object):
                                       'content_type', params)
 
             # special case when both check_gcms_raw and check_gcms_feautures
-
             # Validate content of zip file
             with ZipFile(data) as zip_file:
                 # extended for usage with peak detection results
@@ -258,37 +258,7 @@ class ZipFileValidator(object):
 
                         if feature_matrix_filenames:
                             # try parsing
-                            try:
-                                class_label_dict, feature_matrix_df = MccImsAnalysis.read_in_custom_feature_matrix(
-                                    feature_matrix_filenames[0], zipfile_handle=zip_file)
-                            except ValueError:
-                                # if value_error during parsing
-                                raise ValidationError(
-                                    f"{self.error_messages['feature_matrix']} File: {feature_matrix_filenames[0]}")
-                            except KeyError:
-                                # if value_error during parsing
-                                raise ValidationError(
-                                    f"{self.error_messages['feature_matrix']} File: {feature_matrix_filenames[0]}")
-                            except IndexError:
-                                raise ValidationError(
-                                    f"{self.error_messages['feature_matrix']} File: {feature_matrix_filenames[0]}")
-
-                            # check matching indices
-                            order_check = np.array(list(class_label_dict.keys())) == feature_matrix_df.index.values
-                            order_ok = np.all(order_check)
-
-                            # np.all coerces to scalar - even if it doesnt match ...
-                            index_ok = isinstance(order_check, np.ndarray)
-                            if not order_ok or not index_ok:
-                                raise ValidationError(
-                                    f"{self.error_messages['feature_matrix_labels']} File: {feature_matrix_filenames[0]}")
-                            has_enough_rows = len(feature_matrix_df.index.values) > self.min_number_of_pdr_csv
-                            has_enough_cols = len(feature_matrix_df.columns.values) > 1
-
-                            if not (has_enough_rows and has_enough_cols):
-                                raise ValidationError(
-                                    f"{self.error_messages['feature_matrix_shape']} File: {feature_matrix_filenames[0]}")
-
+                            self.check_for_feature_matrix(zip_handle=zip_file)
                             # create model objects then
 
                         else:
@@ -318,36 +288,249 @@ class ZipFileValidator(object):
 
             if self.check_layer_file:
                 # check whether peak_layer file contained
-                potential_layer_file = MccImsAnalysis.check_for_peak_layer_file(data)
-                if potential_layer_file:
-                    try:
-                        if isinstance(data, InMemoryUploadedFile):
-                            file_path = data.name
-                            MccImsAnalysis.parse_peak_layer("{}/{}".format(file_path, potential_layer_file), memory_file=data)
-                        else:
-                            file_path = data.temporary_file_path()
-                            MccImsAnalysis.parse_peak_layer("{}/{}".format(file_path, potential_layer_file) )
+                self.contains_layer_file = self.check_for_layer_file(data)
 
-                    # except FileNotFoundError:  # no error, just doesnt contain a layer file
-                    except InvalidLayerFileError as ilfe:
-                        params = {'contains_layer_file': False}
-                        raise ValidationError(str(ilfe), 'contains_layer_file', params)
-                    except ValueError:
-                        params = {'contains_layer_file': False}
-                        raise ValidationError(
-                            self.error_messages['contains_layer_file'], 'contains_layer_file', params)
-
-                            # self.error_messages['contains_layer_file'], 'contains_layer_file', params)
-                    # class_label_file_list = [filename for filename in zip_file.namelist() if str.endswith(filename, "class_labels.txt")]
-                    # if not class_label_file_list:
-                    #     params = {'contains_class_label_file': False}
-                    #     raise ValidationError(self.error_messages['contains_class_label_file'],
-                    #                           'contains_class_label_file', params)
-                else:
-                    self.contains_layer_file = False
 
     def __eq__(self, other):
         return isinstance(other, ZipFileValidator)
+
+    def check_for_layer_file(self, data):
+        potential_layer_file = MccImsAnalysis.check_for_peak_layer_file(data)
+        if potential_layer_file:
+            try:
+                if isinstance(data, InMemoryUploadedFile):
+                    file_path = data.name
+                    MccImsAnalysis.parse_peak_layer(f"{file_path}/{potential_layer_file}", memory_file=data)
+                else:
+                    file_path = data.temporary_file_path()
+                    MccImsAnalysis.parse_peak_layer(f"{file_path}/{potential_layer_file}")
+
+            # except FileNotFoundError:  # no error, just doesnt contain a layer file
+            except InvalidLayerFileError as ilfe:
+                params = {'contains_layer_file': False}
+                raise ValidationError(str(ilfe), 'contains_layer_file', params)
+            except ValueError:
+                params = {'contains_layer_file': False}
+                raise ValidationError(
+                    self.error_messages['contains_layer_file'], 'contains_layer_file', params)
+        else:
+            return False
+
+    def check_for_feature_matrix(self, zip_handle, feature_matrix_filenames=[]):
+        if not feature_matrix_filenames:
+            feature_matrix_filenames = [filename for filename in zip_handle.namelist() if
+                                        str.endswith(filename, "_feature_matrix.csv")]
+
+        if not feature_matrix_filenames:
+            raise ValidationError(
+                f"{self.error_messages['no_feature_matrix_found']}")
+
+        try:
+            class_label_dict, feature_matrix_df = MccImsAnalysis.read_in_custom_feature_matrix(
+                feature_matrix_filenames[0], zipfile_handle=zip_handle)
+        except (ValueError, KeyError, IndexError):
+            # if value_error during parsing
+            raise ValidationError(
+                f"{self.error_messages['feature_matrix']} File: {feature_matrix_filenames[0]}")
+
+        # check matching indices
+        order_check = np.array(list(class_label_dict.keys())) == feature_matrix_df.index.values
+        order_ok = np.all(order_check)
+
+        # np.all coerces to scalar - even if it doesnt match ...
+        index_ok = isinstance(order_check, np.ndarray)
+        if not order_ok or not index_ok:
+            raise ValidationError(
+                f"{self.error_messages['feature_matrix_labels']} File: {feature_matrix_filenames[0]}")
+        has_enough_rows = len(feature_matrix_df.index.values) > self.min_number_of_pdr_csv
+        has_enough_cols = len(feature_matrix_df.columns.values) > 1
+
+        if not (has_enough_rows and has_enough_cols):
+            raise ValidationError(
+                f"{self.error_messages['feature_matrix_shape']} File: {feature_matrix_filenames[0]}")
+
+
+@deconstructible
+class UserDatasetZipFileValidator(object):
+    error_messages = {
+        'max_size': ("Ensure this file size is not greater than %(max_size)s."
+                     " Your file size is %(size)s."),
+        'min_size': ("Ensure this file size is not less than %(min_size)s. "
+                     "Your file size is %(size)s."),
+        'content_type': "Files of type %(content_type)s are not supported.",
+        'contains_class_label_file': 'Archive does not contain a class_label file. Please add a proper '\
+                                     '"class_labels.csv" file to the archive and try again.',
+        'class_label_file_doesnt_match': 'class_label file does not match measurements. Make sure your '\
+                     '"class_labels.csv" file contains only the measurement names of the ones present and try again.',
+        'layer_file': "Layer file could not be read. Only .csv or single excel sheet supported.",
+        'too_many_feature_matrices': "Too many feature matrices provided. Please add only a single feature matrix.",
+        'feature_matrix': "Could not parse provided feature matrix.",
+        'no_feature_matrix_found': "No feature matrix found. If choosing 'FEAUTURE_MATRIX', zip archive needs to contain a file ending with 'feature_matrix.csv'.",
+        'feature_matrix_shape': "Feature matrix does not contain enough rows for cross validation. Need at least 2 rows (samples) and 1 column (features).",
+        'feature_matrix_labels': "Feature matrix rows do not match the order of class labels. Both need to be ordered alphabetically.",
+        'min_number_of_ims_csv': "Need at least 2 _ims.csv measurement files. "
+                                 "You provided ",
+        'min_number_of_gcms_raw': "Need at least 2 .mzml or .mzxml files. "
+                                  "You provided ",
+    }
+
+    def __init__(self, max_size=None, min_size=None, check_layer_file=True):
+        self.max_size = max_size
+        self.min_size = min_size
+        self.content_type = ('application/zip', )
+        self.check_layer_file = check_layer_file
+        self.contains_class_label_file = True
+        self.contains_layer_file = True
+        self.min_number_of_ims_csv = 2
+        self.min_number_of_gcms_raw = 2
+
+
+    def __call__(self, data):
+        if self.max_size is not None and data.size > self.max_size:
+            params = {
+                'max_size': filesizeformat(self.max_size),
+                'size': filesizeformat(data.size),
+            }
+            raise ValidationError(self.error_messages['max_size'],
+                                  'max_size', params)
+
+        if self.min_size is not None and data.size < self.min_size:
+            params = {
+                'min_size': filesizeformat(self.min_size),
+                'size': filesizeformat(data.size)
+            }
+            raise ValidationError(self.error_messages['min_size'],
+                                  'min_size', params)
+
+        if self.content_type:
+            content_type = magic.from_buffer(data.read(), mime=True)
+            # a valid file can be read again in view or file handler without explicitly seek to 0
+            data.seek(0)
+            # print('content_type', content_type)
+
+            if content_type not in self.content_type:
+                params = {'content_type': content_type}
+                raise ValidationError(self.error_messages['content_type'],
+                                      'content_type', params)
+
+            # special case when both check_gcms_raw and check_gcms_feautures
+            # Validate content of zip file
+            with ZipFile(data) as zip_file:
+
+                # first - always check for class labels
+                # check whether class_label file contained
+                class_label_file_list = [filename for filename in zip_file.namelist() if (str.endswith(filename, "class_labels.txt") or str.endswith(filename, "class_labels.tsv") or str.endswith(filename, "class_labels.csv") )]
+
+                if not class_label_file_list:
+                    params = {'contains_class_label_file': False}
+                    raise ValidationError(self.error_messages['contains_class_label_file'],
+                                          'contains_class_label_file', params)
+
+                #  check for feature matrix
+                feature_matrix_filenames = [filename for filename in zip_file.namelist() if str.endswith(filename, "_feature_matrix.csv")]
+
+                # prioritize feature matrix - is further in pipeline and skips more steps - multiple feature matrices
+                if feature_matrix_filenames:
+                    if len(feature_matrix_filenames) > 1:
+                        # problem when parsing multiple feature matrices at once - we group them by peak_detection_method_name - if all have CUSTOM we can't separate them later on
+                        raise ValidationError(f"{self.error_messages['too_many_feature_matrices']} Got {len(feature_matrix_filenames)}.")
+                # check for raw gcms files
+                gcms_raw = filter_mzml_or_mzxml_filenames(dir="", filelis=zip_file.namelist())
+                if gcms_raw and len(gcms_raw) < self.min_number_of_gcms_raw:
+                    raise ValidationError(f"{self.error_messages['min_number_of_gcms_raw']} {len(gcms_raw)}.")
+
+                # check raw ims files
+                csv_filenames = [filename for filename in zip_file.namelist() if str.endswith(filename, "_ims.csv")]
+
+                if csv_filenames and len(csv_filenames) < self.min_number_of_ims_csv:
+                    # params = {'min_number_of_ims_csv': len(csv_filenames)}
+                    raise ValidationError(f"{self.error_messages['min_number_of_ims_csv']} {len(csv_filenames)}.")
+
+                if not (feature_matrix_filenames, gcms_raw, csv_filenames):
+                    raise ValidationError(f"Need either a feature matrix (*feature_matrix.csv), raw mcc-ims files (*ims.csv) or *mzml files to create a new dataset split.")
+
+            if self.check_layer_file:
+                # check whether peak_layer file contained
+                self.contains_layer_file = self.check_for_layer_file(data)
+
+
+    def __eq__(self, other):
+        return isinstance(other, ZipFileValidator)
+
+    def check_for_layer_file(self, data):
+        potential_layer_file = MccImsAnalysis.check_for_peak_layer_file(data)
+        if potential_layer_file:
+            try:
+                if isinstance(data, InMemoryUploadedFile):
+                    file_path = data.name
+                    MccImsAnalysis.parse_peak_layer(f"{file_path}/{potential_layer_file}", memory_file=data)
+                else:
+                    file_path = data.temporary_file_path()
+                    MccImsAnalysis.parse_peak_layer(f"{file_path}/{potential_layer_file}")
+
+            # except FileNotFoundError:  # no error, just doesnt contain a layer file
+            except InvalidLayerFileError as ilfe:
+                params = {'contains_layer_file': False}
+                raise ValidationError(str(ilfe), 'contains_layer_file', params)
+            except ValueError:
+                params = {'contains_layer_file': False}
+                raise ValidationError(
+                    self.error_messages['contains_layer_file'], 'contains_layer_file', params)
+        else:
+            return False
+
+    def check_for_feature_matrix(self, zip_handle, feature_matrix_filenames=[]):
+        if not feature_matrix_filenames:
+            feature_matrix_filenames = [filename for filename in zip_handle.namelist() if
+                                        str.endswith(filename, "_feature_matrix.csv")]
+
+        if not feature_matrix_filenames:
+            raise ValidationError(
+                f"{self.error_messages['no_feature_matrix_found']}")
+
+        try:
+            class_label_dict, feature_matrix_df = MccImsAnalysis.read_in_custom_feature_matrix(
+                feature_matrix_filenames[0], zipfile_handle=zip_handle)
+        except (ValueError, KeyError, IndexError):
+            # if value_error during parsing
+            raise ValidationError(
+                f"{self.error_messages['feature_matrix']} File: {feature_matrix_filenames[0]}")
+
+        # check matching indices
+        order_check = np.array(list(class_label_dict.keys())) == feature_matrix_df.index.values
+        order_ok = np.all(order_check)
+
+        # np.all coerces to scalar - even if it doesnt match ...
+        index_ok = isinstance(order_check, np.ndarray)
+        if not order_ok or not index_ok:
+            raise ValidationError(
+                f"{self.error_messages['feature_matrix_labels']} File: {feature_matrix_filenames[0]}")
+        has_enough_rows = len(feature_matrix_df.index.values) > 2
+        has_enough_cols = len(feature_matrix_df.columns.values) > 1
+
+        if not (has_enough_rows and has_enough_cols):
+            raise ValidationError(
+                f"{self.error_messages['feature_matrix_shape']} File: {feature_matrix_filenames[0]}")
+
+    def check_gcms_raw(self, zip_handle):
+        # check for raw gcms files
+        gcms_raw = filter_mzml_or_mzxml_filenames(dir="", filelis=zip_handle.namelist())
+        if gcms_raw and len(gcms_raw) < self.min_number_of_gcms_raw:
+            raise ValidationError(f"{self.error_messages['min_number_of_gcms_raw']} {len(gcms_raw)}.")
+
+    def check_validity_analysis_type(self, zip_handle, analysis_type):
+        # do sanity checks for different analysis types - not called automatically
+        if analysis_type == AnalysisType.FEATURE_MATRIX:
+            self.check_for_feature_matrix(zip_handle=zip_handle)
+        elif analysis_type == AnalysisType.RAW_GC_MS:
+            self.check_gcms_raw(zip_handle=zip_handle)
+        elif analysis_type == AnalysisType.RAW_MCC_IMS:
+            # check ims files
+            csv_filenames = [filename for filename in zip_handle.namelist() if str.endswith(filename, "_ims.csv")]
+            if len(csv_filenames) < self.min_number_of_ims_csv:
+                raise ValidationError(f"{self.error_messages['min_number_of_ims_csv']} {len(csv_filenames)}.")
+        else:
+            raise ValidationError("AnalysisType not implemented.")
 
 
 class FileSet(models.Model):
@@ -437,7 +620,7 @@ class AnalysisType(Enum):
 class UserDefinedFileset(models.Model):
     """Dataset uploaded by user
     """
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     description = models.CharField(max_length=100)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     class_label_mapping = JSONField(default=dict)
@@ -446,6 +629,7 @@ class UserDefinedFileset(models.Model):
     analysis_type = models.CharField(max_length=255)#, choices=AnalysisType.choices())
     train_val_ratio = models.FloatField()  # min =0.05 and max value 0.95 handled by form
     is_train = models.BooleanField()
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -519,6 +703,9 @@ class PredefinedCustomPeakDetectionFileSet(models.Model):
     class_label_processed_id_dict = JSONField(default=dict)
     upload = models.FileField(upload_to='archives/predefined_pdr/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    analysis_type = models.CharField(max_length=255)  # AnalysisType
+    train_val_ratio = models.FloatField()
+    is_train = models.BooleanField()
 
     def get_class_label_processed_id_dict(self):
         return OrderedDict(sorted(self.class_label_processed_id_dict.items(), key=lambda t: t[0]))
@@ -2035,7 +2222,7 @@ def construct_user_defined_fileset_from_zip(zippath, name:str, description:str, 
                                        origin_zip_fn=zippath)
 
     # now save in model
-    t_fs = UserDefinedFileset(name=name, description=description, user=user,
+    t_fs = UserDefinedFileset(name=name, description=f"Train {description}", user=user,
                                class_label_mapping=train_class_label_dict,
                                upload=ContentFile(train_zip_buffer.getvalue(), name=f"train_{base_fn}"),
                                analysis_type=analysis_type, train_val_ratio=train_val_ratio,
@@ -2043,10 +2230,10 @@ def construct_user_defined_fileset_from_zip(zippath, name:str, description:str, 
                               )
     t_fs.save()
 
-    v_fs = UserDefinedFileset(name=name, description=description, user=user,
+    v_fs = UserDefinedFileset(name=name, description=f"Validate {description}", user=user,
                                class_label_mapping=val_class_label_dict,
                                upload=ContentFile(val_zip_buffer.getvalue(), name=f"val_{base_fn}"),
-                               analysis_type=analysis_type, train_val_ratio=train_val_ratio,
+                               analysis_type=analysis_type, train_val_ratio=1-train_val_ratio,
                               is_train=False,
                               )
     v_fs.save()
@@ -2068,17 +2255,15 @@ def construct_user_defined_feature_matrices_from_zip(zippath, name:str, descript
     base_fm_fn = f"{pdm_name}_feature_matrix.csv"
 
     train_df, test_df = split_labels_ratio(class_label_dict, train_val_ratio)
-    tr_class_labels = OrderedDict(train_df[['name', 'label']].items())
-    te_class_labels = OrderedDict(test_df[['name', 'label']].items())
+
+    tr_class_labels = OrderedDict({n:l for i,(n,l) in train_df[['name', 'label']].iterrows()})
+    te_class_labels = OrderedDict({n:l for i,(n,l) in test_df[['name', 'label']].iterrows()})
 
     tr_fm = fm.loc[fm.index.intersection(train_df['name'])]
     te_fm = fm.loc[fm.index.intersection(test_df['name'])]
 
     tr_fm_fn = f"train_{base_fm_fn}"
     te_fm_fn = f"validate_{base_fm_fn}"
-
-    tr_fm_name = f"Train {name}"
-    te_fm_name = f"Validate {name}"
 
     tr_buff = StringIO()
     te_buff = StringIO()
@@ -2089,23 +2274,30 @@ def construct_user_defined_feature_matrices_from_zip(zippath, name:str, descript
     te_fm.to_csv(te_buff, index=True, header=True, index_label="index")
     te_buff.seek(0)
 
-    fm_ids = []
-    for fm, name, description, fm_fn, buff, is_training_matrix, class_labels in zip(
-            [tr_fm, te_fm], [tr_fm_name, te_fm_name], [description, description], [tr_fm_fn, te_fm_fn], [tr_buff, te_buff], [True, False], [tr_class_labels, te_class_labels]):
-        fm = UserDefinedFeatureMatrix(
-                user=user, name=fm_fn, description=description,
-                peak_detection_method_name=pdm_name,
-                file=ContentFile(buff.getvalue(), name=fm_fn, ),
-                class_label_dict=class_labels,
-                train_val_ratio=train_val_ratio,
-                is_training_matrix=is_training_matrix,
-                is_prediction_matrix=(not is_training_matrix),
-                )
-        fm.save()
-        fm_ids.append(fm.pk)
+    tr_fm = UserDefinedFeatureMatrix(
+        user=user, name=name, description=f"Train {description}",
+        peak_detection_method_name=pdm_name,
+        file=ContentFile(tr_buff.getvalue(), name=tr_fm_fn, ),
+        class_label_dict=tr_class_labels,
+        train_val_ratio=train_val_ratio,
+        is_training_matrix=True,
+        is_prediction_matrix=False,
+    )
+    tr_fm.save()
 
-    print(f"Created UserDefinedFeatureMatrices {fm_ids}")
-    return fm_ids
+    te_fm = UserDefinedFeatureMatrix(
+        user=user, name=name, description=f"Validate {description}",
+        peak_detection_method_name=pdm_name,
+        file=ContentFile(te_buff.getvalue(), name=te_fm_fn, ),
+        class_label_dict=te_class_labels,
+        train_val_ratio=1.-train_val_ratio,
+        is_training_matrix=False,
+        is_prediction_matrix=True,
+    )
+    te_fm.save()
+
+    print(f"Created UserDefinedFeatureMatrices {tr_fm} {te_fm}")
+    return [tr_fm, te_fm]
 
 
 def create_GCMS_peak_detection_fileset_from_zip(zippath):
