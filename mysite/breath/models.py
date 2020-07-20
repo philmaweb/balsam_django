@@ -593,8 +593,7 @@ class PredefinedFileset(models.Model):
         self.save()
 
     def __str__(self):
-        return "{0} - {2}".format(
-            self.name, self.pk, self.description, str(self.uploaded_at),)
+        return f"{self.name} - {self.description} - {self.uploaded_at.strftime('%Y.%m.%d %H:%M')}"
 
     def delete(self, *args, **kwargs):
         full_media_path = os.path.join(settings.MEDIA_ROOT, self.upload.name)
@@ -648,7 +647,7 @@ class UserDefinedFileset(models.Model):
         self.save()
 
     def __str__(self):
-        return f"{self.name} - {self.description} - {self.analysis_type}"
+        return f"{self.name} - {self.description} - {self.uploaded_at.strftime('%Y.%m.%d %H:%M')} - {self.analysis_type}"
 
     def get_zip(self):
         """
@@ -1808,7 +1807,7 @@ class UserDefinedFeatureMatrix(models.Model):
         return pd.read_csv(self.file.path, index_col=0)
 
     def __str__(self):
-        return f"UserDefinedFeatureMatrix {self.pk} - {User} PDMName: {str(self.peak_detection_method_name)}"
+        return f"{self.name} - {self.description} - {self.created_at.strftime('%Y.%m.%d %H:%M')} - {str(self.peak_detection_method_name)} - FEATURE_MATRIX"
 
     def get_class_label_dict(self):
         """
@@ -1837,14 +1836,15 @@ class FeatureMatrix(models.Model):
     is_prediction_matrix = models.BooleanField(default=False)  # we only create FeatureMatrix for training
 
     @classmethod
-    def from_user_defined_feature_matrix(cls, user_defined_feature_matrix: UserDefinedFeatureMatrix, analysis_id: int):
+    def from_user_defined_feature_matrix(cls, user_defined_feature_matrix: UserDefinedFeatureMatrix, analysis_id: (int,None)):
         """Call as
            fm = FeatureMatrix.from_user_defined_feature_matrix(user_defined_feature_matrix)
         """
-        # prep work
-        # year, month, day = map(int, date_str.split('-'))
-
-        return cls(analysis=MccImsAnalysisWrapper.get(analysis_id),
+        if analysis_id:
+            wrapper = MccImsAnalysisWrapper.objects.get(analysis_id)
+        else:
+            wrapper = None
+        return cls(analysis=wrapper,
                    name=user_defined_feature_matrix.name,
                    peak_detection_method_name=user_defined_feature_matrix.peak_detection_method_name,
                    file=user_defined_feature_matrix.file,
@@ -2079,13 +2079,13 @@ class GCMSPredefinedPeakDetectionFileSet(models.Model):
     class_label_dict = JSONField(default=dict)
     upload = models.FileField(upload_to='archives/predefined_featurexml/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
-
+    is_train = models.BooleanField()
 
     def get_class_label_processed_id_dict(self):
         return OrderedDict(sorted(self.class_label_processed_id_dict.items(), key=lambda t: t[0]))
 
     def __str__(self):
-        return f"{self.name} - {self.description}"
+        return f"{self.name} - {self.description} - {self.created_at.strftime('%Y.%m.%d %H:%M')}"
 
     def delete(self, *args, **kwargs):
         full_media_path = os.path.join(settings.MEDIA_ROOT, self.upload.name)
@@ -2145,7 +2145,7 @@ def construct_custom_peak_detection_fileset_from_zip(zippath):
     return custom_fileset.pk
 
 
-def construct_custom_feature_matrix_from_zip(zippath):
+def construct_custom_feature_matrix_from_zip(zippath, is_train):
     """
     extract the class_label dict and feature matrix from the zip
     :param zippath:
@@ -2167,7 +2167,9 @@ def construct_custom_feature_matrix_from_zip(zippath):
                        name=fm_fn,
                        peak_detection_method_name=pdm_name,
                        file=ContentFile(buff.getvalue(), name=fm_fn + ".csv", ),
-                       class_label_dict=class_label_dict, # possible for OrderedDict?
+                       class_label_dict=class_label_dict,
+                       is_training_matrix=is_train,
+                       is_validation_matrix=(not is_train)
                        )
     fm.save()
     print(f"Created FeatureMatrix {fm.pk}")

@@ -221,7 +221,7 @@ def add_predefined_gcms_filesets():
                 archive_names.append(archive_nl)
                 pdms.append(pdm)
 
-    archive_paths = ['{}{}'.format(zip_folder, archive_name) for archive_name in archive_names]
+    archive_paths = [f'{zip_folder}{archive_name}' for archive_name in archive_names]
 
     initial_label = {}
     for i, (name, description, archive_path, pdm) in enumerate(zip(names, descriptions, archive_paths, pdms)):
@@ -229,7 +229,10 @@ def add_predefined_gcms_filesets():
 
         # PredefinedCustomPeakDetectionFileSet.objects
         # try:
-        predefined_fileset = GCMSPredefinedPeakDetectionFileSet(name=name, description=description, upload=archive_path, class_label_processed_id_dict=initial_label)
+        is_train = (i % 2 == 0)
+        predefined_fileset = GCMSPredefinedPeakDetectionFileSet(name=name, description=description, upload=archive_path,
+                                                                class_label_processed_id_dict=initial_label,
+                                                                is_train=is_train)
         predefined_fileset.save()
 
         # move to db - create fileField - then get path from that to create pdrs

@@ -1,5 +1,6 @@
 import zipfile
 from itertools import chain
+from io import StringIO
 import tempfile
 import os
 from pathlib import Path
@@ -21,7 +22,7 @@ from crispy_forms.layout import Submit, Field, Layout, Fieldset, ButtonHolder, B
 from crispy_forms.bootstrap import AppendedText, PrependedAppendedText, PrependedText, TabHolder, Tab, FormActions
 
 from .models import (WebPredictionModel, ZipFileValidator, UserDatasetZipFileValidator,
-                     PredefinedFileset, PredefinedCustomPeakDetectionFileSet,
+                     PredefinedFileset, PredefinedCustomPeakDetectionFileSet, FeatureMatrix,
                      UserDefinedFileset, UserDefinedFeatureMatrix, AnalysisType,
                      construct_user_defined_fileset_from_zip, construct_user_defined_feature_matrices_from_zip,
                      GCMSFileSet, GCMSPeakDetectionFileSet, GCMSPeakDetectionResult,
@@ -65,21 +66,25 @@ class WebImsSetForm(forms.Form):
     # based on https://stackoverflow.com/questions/4789466/populate-a-django-form-with-data-from-database-in-view#answer-4789516
     based_on_predefined_sets = forms.ModelChoiceField(
         required=False,
-        label="Predefined Datasets",
-        queryset=PredefinedFileset.objects.all().order_by('name'),
+        label="Default Datasets",
+        queryset=PredefinedFileset.objects.filter(is_train=True).order_by('name'),
     )
 
-    user_file = forms.FileField(
+    based_on_user_sets = forms.ModelChoiceField(
         required=False,
-        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=True)],
-        label="Own Dataset (Zip-File)",
-        help_text="Please upload a zip archive containing the MCC-IMS-measurements for building the model and the class label file. The class label file has to be tab or comma separated.",
+        label="Your Datasets",
+        queryset=UserDefinedFileset.objects.none(),
     )
 
-    # def __init__(self, *args, user_id, **kwargs):
-    def __init__(self, *args, **kwargs):
+    def __init__(self,*args, user_id=None, **kwargs):
         super(WebImsSetForm, self).__init__(*args, **kwargs)
 
+        # get user model to field - if POST user_id will be QueryDict -
+        # if not isinstance(user_id, int):
+        #     user_id
+        user = User.objects.get(pk=user_id)
+        user_queryset = UserDefinedFileset.objects.filter(user=user, is_train=True).order_by('name')
+        self.fields['based_on_user_sets'].queryset = user_queryset
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Submit'))
@@ -87,62 +92,27 @@ class WebImsSetForm(forms.Form):
     def clean(self):
         # if both fields given, chose user submit
         based_on_predefined_sets = self.cleaned_data.get('based_on_predefined_sets')
-        user_file = self.cleaned_data.get('user_file')
-        zip_file = None
+        user_file = self.cleaned_data.get('based_on_user_sets')
 
         if user_file:
-            zip_file = user_file
-            if isinstance(zip_file, InMemoryUploadedFile):
+            zip_file = user_file.upload
+            self.cleaned_data['zip_file_path'] = zip_file.path
 
-                filename = zip_file.name  # received file name
-                file_obj = zip_file
-
-                target_dir = tempfile.gettempdir()
-
-                target_path = Path(target_dir) / filename
-                with open(target_path, 'wb+') as destination:
-                    for chunk in file_obj.chunks():
-                        destination.write(chunk)
-
-                self.cleaned_data['zip_file_path'] = target_path
-            else:
-                self.cleaned_data['zip_file_path'] = zip_file.temporary_file_path()
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, PredefinedFileset):
             # zip_file = self.construct_zip_file(based_on_predefined_sets)
             zip_file = based_on_predefined_sets.upload
             self.cleaned_data['zip_file_path'] = zip_file.path
+
         else:
             error_strings = ["Please select an available dataset or upload your own.",]
             for err in self.errors.values():
                 # remove "* " representation from error
                 error_strings.append(err.as_text()[2:])
 
-            msg = ValidationError(error_strings)
-            raise msg
-            # self.add_error(based_on_predefined_sets, msg)
-            # self.add_error(user_file, msg)
+            raise ValidationError(error_strings)
         self.cleaned_data['zip_file'] = zip_file
 
         return self.cleaned_data
-
-
-    # make user_id available to model, this requires the view passing the user_id
-    # see https://www.pydanny.com/adding-django-form-instance-attributes.html for reference
-    # def __init__(self, *args, **kwargs):
-    #     # self.user_id = user_id
-    #     super(WebImsSetForm, self).__init__(*args, **kwargs)
-    #     # set the user_id as attribute of the form
-    #     # self._meta.model.user_id = user_id
-    #
-    #     # title = forms.CharField(max_length=50)
-    #     #
-    # def form_valid(self, form):
-    #     # res = self.req
-    #     # my_file = SimpleUploadedFile()
-    #     # assert zipfile.is_zipfile()
-    #     form.instance.user_id = self.request.user
-    #     return super().form_valid()
-
 
 
 class ProcessingStepsForm(forms.Form):
@@ -928,20 +898,18 @@ class PredictionForm(forms.Form):
 
     based_on_predefined_sets = forms.ModelChoiceField(
         required=False,
-        label="Predefined Datasets",
-        queryset=PredefinedFileset.objects.all()
+        label="Default Datasets",
+        queryset=PredefinedFileset.objects.filter(is_train=False).order_by('name'),
     )
 
-    zip_file = forms.FileField(
+    based_on_user_sets = forms.ModelChoiceField(
         required=False,
-        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=False, check_layer_file=False)],
-        label="Zip file",
-        help_text="\nPlease upload a zip archive containing the MCC-IMS-measurements to predict. Optionally add a class_labels.csv file to the archive.",
+        label="Your Datasets",
+        queryset=UserDefinedFileset.objects.none(),
     )
 
 
-
-    def __init__(self, web_prediction_model_key, *args, **kwargs):
+    def __init__(self, web_prediction_model_key, *args, user_id=None, **kwargs):
         super(PredictionForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
 
@@ -954,28 +922,33 @@ class PredictionForm(forms.Form):
         self.fields['based_on_performance_measure'].choices = zip(pdm_names, prediction_model_descriptions)
         self.fields['based_on_performance_measure'].initial = pdm_names[0]
 
-        # self.fields['web_prediction_model_field'].queryset =
-        # self.fields['web_prediction_model_field'].empty_label = None
+        user = User.objects.get(pk=user_id)
+        user_queryset = UserDefinedFileset.objects.filter(user=user, is_train=False).order_by('name')
+        self.fields['based_on_user_sets'].queryset = user_queryset
+        self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Submit'))
-
 
     def clean(self):
         from .models import ClassPredictionFileSet
 
         # based_on_performance_measure = self.cleaned_data.get('based_on_performance_measure') # no need to clean
         based_on_predefined_sets = self.cleaned_data.get('based_on_predefined_sets')
-        user_file = self.cleaned_data.get('zip_file')
-        # zip_file = None
+
+        # if both fields given, chose user submit
+        user_file = self.cleaned_data.get('based_on_user_sets')
+
         if user_file:
-            classPredictionFileSet = ClassPredictionFileSet(upload=user_file)
+            classPredictionFileSet = ClassPredictionFileSet(upload=user_file.upload)
             classPredictionFileSet.save()
             prediction_file_set_id = classPredictionFileSet.pk
+
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, PredefinedFileset):
             # zip_file = self.construct_zip_file(based_on_predefined_sets)
             classPredictionFileSet = ClassPredictionFileSet(upload=based_on_predefined_sets.upload)
             classPredictionFileSet.save()
             prediction_file_set_id = classPredictionFileSet.pk
+
         else:
             msg = ValidationError("Please select an available dataset or upload your own.")
             # self.add_error(based_on_predefined_sets, msg)
@@ -989,20 +962,18 @@ class PredictionForm(forms.Form):
 
 class CustomDetectionAnalysisForm(forms.Form):
     """
-    Needs to handle upload of zipfile with class labels and peak detection results
+    Needs to handle user datasets with class labels and peak detection results / feature matrix
     """
-
-    user_file = forms.FileField(
-        required=False,
-        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=True, check_layer_file=False, check_peak_detection_results=True)],
-        label="Your Peak Detection Results",
-        help_text="\nPlease upload a zip archive containing the peak detection results or feature matrix for further analysis.",
-    )
-
     based_on_predefined_sets = forms.ModelChoiceField(
         required=False,
-        label="Available Datasets",
-        queryset=PredefinedCustomPeakDetectionFileSet.objects.all()
+        label="Default Datasets",
+        queryset=PredefinedCustomPeakDetectionFileSet.objects.filter(is_train=True)
+    )
+
+    based_on_user_fm = forms.ModelChoiceField(
+        required=False,
+        label="Your Datasets",
+        queryset=UserDefinedFeatureMatrix.objects.none(),
     )
 
     peak_alignment = forms.TypedChoiceField(
@@ -1052,8 +1023,13 @@ class CustomDetectionAnalysisForm(forms.Form):
         help_text="Gridwidth factor for retention time.",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user_id=None, **kwargs):
         super(CustomDetectionAnalysisForm, self).__init__(*args, **kwargs)
+
+        user = User.objects.get(pk=user_id)
+        user_queryset = UserDefinedFeatureMatrix.objects.filter(user=user, is_training_matrix=True).order_by('name')
+        self.fields['based_on_user_fm'].queryset = user_queryset
+
         self.helper = FormHelper()
 
         self.helper = FormHelper()
@@ -1063,8 +1039,8 @@ class CustomDetectionAnalysisForm(forms.Form):
                 # li should have nav-item and a nav-link
                 Tab('Simple',
                     Fieldset('Dataset',
-                             Field('user_file'),
                              Field('based_on_predefined_sets'),
+                             Field('based_on_user_fm'),
                              ),
                     ),
                 Tab('Advanced',
@@ -1089,46 +1065,38 @@ class CustomDetectionAnalysisForm(forms.Form):
     def clean(self):
         # from .models import ClassPredictionFileSet
         from .models import construct_custom_peak_detection_fileset_from_zip, construct_custom_feature_matrix_from_zip
+
+        based_on_user_fm = self.cleaned_data.get('based_on_user_fm')
         based_on_predefined_sets = self.cleaned_data.get('based_on_predefined_sets')
 
-        # from .models import WebPeakDetectionResult
-        my_user_file = self.cleaned_data.get('user_file')
-        # zip_file = None
-        if my_user_file:
-            # CustomPeakDetectionFileSet - contains pdr and class label file
-            # ids of pdr saved in custom construct
+        # user_file = self.cleaned_data.get('user_file')
+        if based_on_user_fm and isinstance(based_on_user_fm, UserDefinedFeatureMatrix):
+            # not a zipfile
+            file_path = based_on_user_fm.file.path
+            #zip_file_path = zip_file.path
 
-            # Store to disk
-            if isinstance(my_user_file, InMemoryUploadedFile):
+            feature_matrix = FeatureMatrix.from_user_defined_feature_matrix(based_on_user_fm, analysis_id=None)
+            feature_matrix.save()
 
-                filename = my_user_file.name  # received file name
-                file_obj = my_user_file
-                target_dir = tempfile.gettempdir()
+            self.cleaned_data['feature_matrix_id'] = feature_matrix.pk
+            print(f"Created FeatureMatrix {feature_matrix.pk}")
 
-                target_path = Path(target_dir) / filename
-                with open(target_path, 'wb+') as destination:
-                    for chunk in file_obj.chunks():
-                        destination.write(chunk)
+            # # check whether pdrs or feature matrix - priority to feature matrix
+            # if CustomDetectionAnalysisForm.does_contain_feature_matrix(zip_file_path):
+            #     feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path)
+            #     self.cleaned_data['feature_matrix_id'] = feature_matrix_id
 
-                zip_file_path = Path(target_path)
-            else:
-                zip_file_path = my_user_file.temporary_file_path()
-
-            # check whether pdrs or feature matrix - priority to feature matrix
-            if CustomDetectionAnalysisForm.does_contain_feature_matrix(zip_file_path):
-                feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path)
-                self.cleaned_data['feature_matrix_id'] = feature_matrix_id
-
-            else:
-                customPDFS_id = construct_custom_peak_detection_fileset_from_zip(zip_file_path)
-                self.cleaned_data['customPDFS_id'] = customPDFS_id
+            # at this moment won't happen as user filesets can only contain feature matrix or raw files
+            # else:
+            #     customPDFS_id = construct_custom_peak_detection_fileset_from_zip(zip_file_path)
+            #     self.cleaned_data['customPDFS_id'] = customPDFS_id
 
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, PredefinedCustomPeakDetectionFileSet):
             zip_file_path = based_on_predefined_sets.upload.path
 
             # does not contain feature matrix - but let's keep it in for completeness sake
             if CustomDetectionAnalysisForm.does_contain_feature_matrix(zip_file_path):
-                feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path)
+                feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path, is_train=True)
                 self.cleaned_data['feature_matrix_id'] = feature_matrix_id
 
             else:
@@ -1147,7 +1115,7 @@ class CustomDetectionAnalysisForm(forms.Form):
             # need to raise error
             raise ValidationError(msg)
 
-        # pass chosen peak_alignment to cleaned data
+        # pass on chosen peak_alignment to cleaned data
         preprocessing_parameters = dict()
         selected_peak_alignment_method = self.cleaned_data['peak_alignment']
         preprocessing_parameters[selected_peak_alignment_method.name] = {}
@@ -1320,19 +1288,17 @@ class CustomPredictionForm(forms.Form):
     based_on_predefined_sets = forms.ModelChoiceField(
         required=False,
         label="Predefined Datasets",
-        queryset=PredefinedCustomPeakDetectionFileSet.objects.all()
+        queryset=PredefinedCustomPeakDetectionFileSet.objects.filter(is_train=False)
     )
 
-
-    user_file = forms.FileField(
+    based_on_user_fm = forms.ModelChoiceField(
         required=False,
-        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=True, check_layer_file=False, check_peak_detection_results=True)],
-        label="Your Peak Detection Results for prediction.",
-        help_text="\nPlease upload a zip archive containing the peak detection results for further analysis. Optionally add a class_labels.csv file to the archive.",
+        label="Your Datasets",
+        queryset=UserDefinedFeatureMatrix.objects.none(),
     )
 
     # ORDER of the arguments is extremely important - can't have a default value before *args - will fail miserably without error
-    def __init__(self, web_prediction_model_key, *args, training_model_description="", **kwargs):
+    def __init__(self, web_prediction_model_key, *args, user_id=None, **kwargs):
         super(CustomPredictionForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
 
@@ -1345,22 +1311,15 @@ class CustomPredictionForm(forms.Form):
         self.fields['based_on_performance_measure'].choices = zip(pdm_names, prediction_model_descriptions)
         self.fields['based_on_performance_measure'].initial = pdm_names[0]
 
-        # pdm_name = "CUSTOM"
+        user = User.objects.get(pk=user_id)
+        user_queryset = UserDefinedFeatureMatrix.objects.filter(user=user, is_training_matrix=False).order_by('name')
+        self.fields['based_on_user_fm'].queryset = user_queryset
 
-        training_model_description = "Description here"
-        if training_model_description:
-            self.helper.layout = Layout(
-                 Field('based_on_performance_measure'),
-                 # HTML(f"<small class='form-text text-muted'>{training_model_description}</small>"),
-                 Field('based_on_predefined_sets'),
-                 Field('user_file'),
-                         )
-        else:
-            self.helper.layout = Layout(
-                Field('based_on_performance_measure'),
-                Field('based_on_predefined_sets'),
-                Field('user_file'),
-            )
+        self.helper.layout = Layout(
+             Field('based_on_performance_measure'),
+             Field('based_on_predefined_sets'),
+             Field('based_on_user_fm'),
+                     )
 
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Submit'))
@@ -1368,48 +1327,34 @@ class CustomPredictionForm(forms.Form):
     def clean(self):
         from .models import construct_custom_peak_detection_fileset_from_zip, construct_custom_feature_matrix_from_zip
 
-        my_user_file = self.cleaned_data.get('user_file')
         based_on_predefined_sets = self.cleaned_data.get('based_on_predefined_sets')
-        # zip_file = None
-        if my_user_file:
-            # CustomPeakDetectionFileSet - contains pdr and class label file
-            # ids of pdr saved in custom construct
 
-            if isinstance(my_user_file, InMemoryUploadedFile):
+        # if both fields given, chose user submit
+        based_on_user_fm = self.cleaned_data.get('based_on_user_fm')
 
-                filename = my_user_file.name  # received file name
-                file_obj = my_user_file
+        if based_on_user_fm and isinstance(based_on_user_fm, UserDefinedFeatureMatrix):
+            # not a zipfile
+            file_path = based_on_user_fm.file.path
+            # zip_file_path = zip_file.path
 
-                target_dir = tempfile.gettempdir()
-                target_path = Path(target_dir) / filename
-                with open(target_path, 'wb+') as destination:
-                    for chunk in file_obj.chunks():
-                        destination.write(chunk)
+            feature_matrix = FeatureMatrix.from_user_defined_feature_matrix(based_on_user_fm, analysis_id=None)
+            feature_matrix.save()
 
-                zip_file_path = Path(target_path)
-            else:
-                zip_file_path = my_user_file.temporary_file_path()
-
-            if CustomDetectionAnalysisForm.does_contain_feature_matrix(zip_file_path):
-                feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path)
-                self.cleaned_data['feature_matrix_id'] = feature_matrix_id
-
-            else:
-                customPDFS_id = construct_custom_peak_detection_fileset_from_zip(zip_file_path)
-                self.cleaned_data['customPDFS_id'] = customPDFS_id
-
+            self.cleaned_data['feature_matrix_id'] = feature_matrix.pk
+            print(f"Created FeatureMatrix {feature_matrix.pk}")
 
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, PredefinedCustomPeakDetectionFileSet):
             zip_file_path = based_on_predefined_sets.upload.path
 
-            # does not contain feature matrix - but let's keep it in for completeness sake
+            # current sample sets do not contain feature matrix - but let's keep it in for completeness sake
             if CustomDetectionAnalysisForm.does_contain_feature_matrix(zip_file_path):
-                feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path)
+                feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path, is_train=False)
                 self.cleaned_data['feature_matrix_id'] = feature_matrix_id
 
             else:
                 customPDFS_id = construct_custom_peak_detection_fileset_from_zip(zip_file_path)
                 self.cleaned_data['customPDFS_id'] = customPDFS_id
+
 
         else:
             error_strings = ["Could not parse your peak detection results.",]
@@ -1446,7 +1391,7 @@ class GCMSAnalysisForm(forms.Form):
     based_on_predefined_sets = forms.ModelChoiceField(
         required=False,
         label="Available Datasets",
-        queryset=GCMSPredefinedPeakDetectionFileSet.objects.all()
+        queryset=GCMSPredefinedPeakDetectionFileSet.objects.filter(is_train=True)
     )
 
     # added feature matrix support
@@ -1506,7 +1451,7 @@ class GCMSAnalysisForm(forms.Form):
 
         # check whether feature matrix, featureXML or rawFiles - priority to feature matrix
         if GCMSAnalysisForm.does_contain_feature_matrix(zip_file_path):
-            feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path)
+            feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path, is_train=True)
             self.cleaned_data['feature_matrix_id'] = feature_matrix_id
 
         elif GCMSAnalysisForm.does_contain_featurexml_files(zip_file_path):
@@ -1888,7 +1833,7 @@ class GCMSPredictionForm(forms.Form):
     )
 
     # ORDER of the arguments is extremely important - can't have a default value before *args - will fail misarbly without error
-    def __init__(self, web_prediction_model_key, *args, training_model_description="", **kwargs):
+    def __init__(self, web_prediction_model_key, *args, **kwargs):
         super(GCMSPredictionForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
 
@@ -1902,19 +1847,7 @@ class GCMSPredictionForm(forms.Form):
         self.fields['based_on_performance_measure'].choices = zip(pdm_names, prediction_model_descriptions)
         self.fields['based_on_performance_measure'].initial = pdm_names[0]
 
-        # pdm_name = "CUSTOM"
-
-        if not training_model_description:
-            training_model_description = "Description here"
-        if training_model_description:
-            self.helper.layout = Layout(
-                 Field('based_on_performance_measure'),
-                 # HTML(f"<small class='form-text text-muted'>{training_model_description}</small>"),
-                 Field('based_on_predefined_sets'),
-                 Field('user_file'),
-                         )
-        else:
-            self.helper.layout = Layout(
+        self.helper.layout = Layout(
                 Field('based_on_performance_measure'),
                 Field('based_on_predefined_sets'),
                 Field('user_file'),
@@ -1964,7 +1897,7 @@ class GCMSPredictionForm(forms.Form):
 
         # check whether feature matrix, featureXML or rawFiles - priority to feature matrix
         if self.does_contain_feature_matrix(zip_file_path):
-            feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path)
+            feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path, is_train=False)
             self.cleaned_data['feature_matrix_id'] = feature_matrix_id
 
         elif self.does_contain_featurexml_files(zip_file_path):

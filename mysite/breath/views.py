@@ -197,6 +197,7 @@ def list_datasets(request, user):
     context = if_temp_update_context(user=user, context=context)
 
     # TODO prep filesets for context
+    # date format:  {self.created_at.strftime('%Y.%m.%d %H:%M')}
     user_fms = UserDefinedFeatureMatrix.objects.filter(user=user)
     user_fss = UserDefinedFileset.objects.filter(user=user)
     default_fss = list(PredefinedFileset.objects.all())
@@ -573,13 +574,11 @@ def _selectDataset(request, user, template_name='breath/selectdataset.html', on_
                }
     context = if_temp_update_context(user=user, context=context)
 
-    if request.method == "POST" and request.FILES:
-        web_ims_set_form = WebImsSetForm(request.POST, request.FILES)
-    elif request.method == "POST":
-        web_ims_set_form = WebImsSetForm(request.POST)
+    if request.method == "POST":
+        web_ims_set_form = WebImsSetForm(request.POST, user_id=user.pk)
     # if GET or other request create default form
     else:
-        web_ims_set_form = WebImsSetForm()
+        web_ims_set_form = WebImsSetForm(user_id=user.pk)
         context['form'] = web_ims_set_form
         return render(request, template_name, context)
 
@@ -588,7 +587,7 @@ def _selectDataset(request, user, template_name='breath/selectdataset.html', on_
         empty_fileset = FileSet(name=web_ims_set_form.cleaned_data['zip_file'].name[:50])
         empty_fileset.save()
 
-        # TODO reuse defined Fileset in analysis, and dont recreate one
+        # reuse defined Fileset in analysis, and dont recreate one
         web_ims_set_model = WebImsSet(upload=web_ims_set_form.cleaned_data['zip_file'], file_set=empty_fileset, user=user)
         web_ims_set_model.save()
 
@@ -912,12 +911,10 @@ def _prediction(request, analysis_id, user):
     if request.method == "POST":
         # form = UploadZipfileForm(request.POST, request.FILES)
         if request.FILES:
-            prediction_form = PredictionForm(prediction_model_pk, request.POST, request.FILES)
+            prediction_form = PredictionForm(prediction_model_pk, request.POST, request.FILES, user_id=user.pk)
         else:
-            prediction_form = PredictionForm(prediction_model_pk, request.POST)
+            prediction_form = PredictionForm(prediction_model_pk, request.POST, user_id=user.pk)
         if prediction_form.is_valid():
-            # classPredictionFileSet = ClassPredictionFileSet(upload=prediction_form.cleaned_data['zip_file'])
-            # classPredictionFileSet.save()
             classPredictionFileSet_id = prediction_form.cleaned_data['prediction_file_set_id']
             result = PredictClassTask().delay_or_fail(analysis_id=analysis_id, prediction_file_set_id=classPredictionFileSet_id)
 
@@ -929,7 +926,7 @@ def _prediction(request, analysis_id, user):
 
     context = prepare_prediction_template_parameters(context, analysis_id, user, mcc_ims_analysis_wrapper.is_custom_analysis)
 
-    prediction_form = PredictionForm(prediction_model_pk)
+    prediction_form = PredictionForm(prediction_model_pk, user_id=user.pk)
     context['prediction_form'] = prediction_form
     return render(request, template_name, context=context)
 
@@ -1235,10 +1232,7 @@ def _custom_detection_analysis(request, user):
 
     if request.method == "POST":
         # form = UploadZipfileForm(request.POST, request.FILES)
-        if request.FILES:
-            custom_peak_detection_analysis_form = CustomDetectionAnalysisForm(request.POST, request.FILES)
-        else:
-            custom_peak_detection_analysis_form = CustomDetectionAnalysisForm(request.POST)
+        custom_peak_detection_analysis_form = CustomDetectionAnalysisForm(request.POST, user_id=user.pk)
         if custom_peak_detection_analysis_form.is_valid():
 
             using_feature_matrix = custom_peak_detection_analysis_form.cleaned_data.get('feature_matrix_id', False)
@@ -1320,7 +1314,7 @@ def _custom_detection_analysis(request, user):
             # custom_analysis_debug(custom_analysis.pk)
 
     else:
-        custom_peak_detection_analysis_form = CustomDetectionAnalysisForm()
+        custom_peak_detection_analysis_form = CustomDetectionAnalysisForm(user_id=user.pk)
     # custom_peak_detection_analysis_form.helper.form_action = reverse('analysis', kwargs={"analysis_id": analysis_id})
     context['custom_peak_detection_analysis_form'] = custom_peak_detection_analysis_form
     return render(request, template_name=template_name, context=context)
@@ -1451,19 +1445,12 @@ def custom_prediction(request, analysis_id, user):
         prediction_model = get_object_or_404(WebPredictionModel, mcc_ims_analysis=analysis_id)
     except MultipleObjectsReturned as mor:
         prediction_model = WebPredictionModel.objects.filter(mcc_ims_analysis=analysis_id)[0]
-        print(f"Got mulitple WebPredictionresults, defaulting to {prediction_model}")
-
-    # prediction_model_pk = WebPredictionModel.objects.filter()[0].pk
-    # request.session['prediction_model_pk'] = prediction_model.pk
+        print(f"Got multiple WebPredictionResults, defaulting to {prediction_model}")
 
     # if set, we can continue
     prediction_model_pk = prediction_model.pk
-    # request.session['analysis_id'] = analysis_id
     if request.method == "POST":
-        if request.FILES:
-            custom_prediction_form = CustomPredictionForm(prediction_model_pk, request.POST, request.FILES)
-        else:
-            custom_prediction_form = CustomPredictionForm(prediction_model_pk, request.POST)
+        custom_prediction_form = CustomPredictionForm(prediction_model_pk, request.POST, user_id=user.pk)
 
         if custom_prediction_form.is_valid():
             # classPredictionFileSet = ClassPredictionFileSet(upload=prediction_form.cleaned_data['zip_file'])
@@ -1486,7 +1473,7 @@ def custom_prediction(request, analysis_id, user):
 
     # GET - we need to initialize the form
     else:
-        custom_prediction_form = CustomPredictionForm(web_prediction_model_key=prediction_model_pk)
+        custom_prediction_form = CustomPredictionForm(web_prediction_model_key=prediction_model_pk, user_id=user.pk)
 
     context = prepare_prediction_template_parameters(context=context, analysis_id=analysis_id, user=user, use_custom_prediction=True)
     context['custom_prediction_form'] = custom_prediction_form
@@ -1622,7 +1609,7 @@ def download_user_feature_matrix_csv(request, fm_id, user):
         train_test_prefix = "train"
     else:
         train_test_prefix = "test"
-    response['Content-Disposition'] = f'attachment; filename={train_test_prefix}_{fm_object.name}.csv'
+    response['Content-Disposition'] = f'attachment; filename=User_feature_matrix_{train_test_prefix}_{fm_object.pk}.csv'
 
     return response
 
