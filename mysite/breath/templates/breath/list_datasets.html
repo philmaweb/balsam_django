@@ -5,7 +5,7 @@
 
     <a href="{% url 'upload_dataset' %}">
         <button type="button" class="btn btn-primary btn-lg">
-            Upload new Dataset <span class="glyphicon glyphicon-upload"></span>
+            <i class="fa fa-upload" aria-hidden="true"></i> Upload new Dataset
         </button>
     </a>
     <br>
@@ -32,10 +32,10 @@
                     <td>FEATURE_MATRIX</td>
                     <td>{{user_fm.train_val_ratio}}</td>
                     <td><a href="{% url 'download_user_feature_matrix_csv' user_fm.pk %}" class="btn btn-secondary">
-                            <span class="glyphicon glyphicon-download"></span>download
+                            <i class="fa fa-download" aria-hidden="true"></i> download
                         </a></td>
                     <td>User defined <a href="{% url 'delete_user_feature_matrix' user_fm.pk %}" class="btn btn-danger">
-                            <span class="glyphicon glyphicon-trash"></span>delete
+                            <i class="fa fa-trash" aria-hidden="true"></i> delete
                         </a>
                     </td>
                 </tr>
@@ -52,11 +52,11 @@
                     <td>{{user_fs.analysis_type}}</td>
                     <td>{{user_fs.train_val_ratio}}</td>
                     <td><a href="{% url 'download_user_fileset_zip' user_fs.pk %}" class="btn btn-secondary">
-                            <span class="glyphicon glyphicon-download"></span>download
+                            <i class="fa fa-download" aria-hidden="true"></i> download
                         </a></td>
                     <td>User defined
                         <a href="{% url 'delete_user_fileset' user_fs.pk %}" class="btn btn-danger">
-                            <span class="glyphicon glyphicon-trash"></span>delete
+                            <i class="fa fa-trash" aria-hidden="true"></i> delete
                         </a>
                     </td>
                 </tr>
@@ -73,7 +73,7 @@
                     <td>{{default_fs.analysis_type}}</td>
                     <td>{{default_fs.train_val_ratio}}</td>
                     <td><a href="{% url 'download_default_fileset_zip' default_fs.pk %}" class="btn btn-secondary">
-                            <span class="glyphicon glyphicon-download"></span>download
+                            <i class="fa fa-download" aria-hidden="true"></i> download
                         </a></td>
                     <td>default</td>
                 </tr>
@@ -91,7 +91,7 @@
                     <td>{{default_fs.analysis_type}}</td>
                     <td>{{default_fs.train_val_ratio}}</td>
                     <td><a href="{% url 'download_pd_fileset_zip' default_fs.pk %}" class="btn btn-secondary">
-                            <span class="glyphicon glyphicon-download"></span>download
+                            <i class="fa fa-download" aria-hidden="true"></i> download
                         </a></td>
                     <td>default</td>
                 </tr>
@@ -109,7 +109,7 @@
                     <td>{{default_fs.analysis_type}}</td>
                     <td>{{default_fs.train_val_ratio}}</td>
                     <td><a href="{% url 'download_fxml_fileset_zip' default_fs.pk %}" class="btn btn-secondary">
-                            <span class="glyphicon glyphicon-download"></span>download
+                            <i class="fa fa-download" aria-hidden="true"></i> download
                         </a></td>
                     <td>default</td>
                 </tr>
@@ -118,11 +118,5 @@
         </tbody>
     </table>
 
-<!--<script>-->
-<!--function confirmDelete(datasetID){-->
-<!--if(confirm("Are you sure you want to delete this dataset?")){-->
-<!--    location.href='/keypathwayminer/datasets/deleteDataset?id='+datasetID;-->
-<!--}-->
-<!--</script>-->
 {% endblock %}
 
