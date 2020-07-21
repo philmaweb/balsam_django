@@ -22,14 +22,12 @@ def _selectDatasetGMCS(request, user):
     context = if_temp_update_context(user=user, context=context)
 
     # create gcms based fileset
-    if request.method == "POST" and request.FILES:
-        gcms_analysis_form = GCMSAnalysisForm(request.POST, request.FILES)
-    elif request.method == "POST":
-        gcms_analysis_form = GCMSAnalysisForm(request.POST)
+    if request.method == "POST":
+        gcms_analysis_form = GCMSAnalysisForm(request.POST, user_id=user.pk)
 
     # if GET or other request create default form
     else:
-        gcms_analysis_form = GCMSAnalysisForm()
+        gcms_analysis_form = GCMSAnalysisForm(user_id=user.pk)
         context['form'] = gcms_analysis_form
         return render(request, template_name, context)
 
@@ -74,7 +72,6 @@ def _selectDatasetGMCS(request, user):
                 reverse(on_success_redirect_to, kwargs={'analysis_id': analysis_id}))
 
         gcms_fileset_id = gcms_analysis_form.cleaned_data.get('gcms_fileset_id', False)
-        # print(f"gcms_fileset_id {gcms_fileset_id}")
 
         gcms_fileset = GCMSFileSet.objects.get(pk=gcms_fileset_id)
         wrapper.gcms_set = gcms_fileset
@@ -147,10 +144,11 @@ def selectParametersGCMS(request, analysis_id, user):
     If POST create and execute parallel pre-processing task
     If GET return form to select parameters
     :param request:
+    :param analysis_id:
     :param user:
     :return:
     """
-    from . tasks import GCMSParallelPreprocessingTask
+    from .tasks import GCMSParallelPreprocessingTask
     template_name = 'breath/gcms_selectparameters.html'
     context = {'active_page': 'run',
                }
@@ -175,12 +173,12 @@ def selectParametersGCMS(request, analysis_id, user):
             # gcms_analysis_type = request.session['gcms_analysis_type']
 
             # update the wrapper object
-            wrapper.gcms_set=GCMSFileSet.objects.get(pk=gcms_fileset_id)
-            wrapper.preprocessing_options=jsonable_preprocessing_parameters
+            wrapper.gcms_set = GCMSFileSet.objects.get(pk=gcms_fileset_id)
+            wrapper.preprocessing_options = jsonable_preprocessing_parameters
 
             wrapper.save()
 
-            result = GCMSParallelPreprocessingTask.delay_or_fail(analysis_id)
+            result = GCMSParallelPreprocessingTask.delay_or_fail(analysis_id=analysis_id)
 
             #   result of task GCMSFileset
             return redirect(
@@ -329,10 +327,8 @@ def gcms_prediction(request, analysis_id, user):
     prediction_model_pk = prediction_model.pk
     # request.session['analysis_id'] = analysis_id
     if request.method == "POST":
-        if request.FILES:
-            gcms_prediction_form = GCMSPredictionForm(prediction_model_pk, request.POST, request.FILES)
-        else:
-            gcms_prediction_form = GCMSPredictionForm(prediction_model_pk, request.POST)
+
+        gcms_prediction_form = GCMSPredictionForm(prediction_model_pk, request.POST, user_id=user.pk)
 
         if gcms_prediction_form.is_valid():
 
@@ -354,7 +350,7 @@ def gcms_prediction(request, analysis_id, user):
 
     # GET - we need to initialize the form
     else:
-        gcms_prediction_form = GCMSPredictionForm(web_prediction_model_key=prediction_model_pk)
+        gcms_prediction_form = GCMSPredictionForm(web_prediction_model_key=prediction_model_pk, user_id=user.pk)
 
     # gcms specific preparation?
     context = prepare_prediction_template_parameters(context=context, analysis_id=analysis_id, user=user, use_custom_prediction=True)

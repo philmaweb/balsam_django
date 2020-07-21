@@ -63,7 +63,7 @@
             {% endfor %}
         {% endif %}
 
-        <!--  Builtin Filesets  -->
+        <!--  Builtin regular Filesets  -->
         {% if default_fss %}
             {% for default_fs in default_fss %}
                 <tr>
@@ -73,6 +73,42 @@
                     <td>{{default_fs.analysis_type}}</td>
                     <td>{{default_fs.train_val_ratio}}</td>
                     <td><a href="{% url 'download_default_fileset_zip' default_fs.pk %}" class="btn btn-secondary">
+                            <span class="glyphicon glyphicon-download"></span>download
+                        </a></td>
+                    <td>default</td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+
+
+        <!--  Builtin regular Filesets  -->
+        {% if default_pd_fs %}
+            {% for default_fs in default_pd_fs %}
+                <tr>
+                    <td>{{default_fs.name}}</td>
+                    <td>{{default_fs.description}}</td>
+                    <td>{{default_fs.uploaded_at}}</td>
+                    <td>{{default_fs.analysis_type}}</td>
+                    <td>{{default_fs.train_val_ratio}}</td>
+                    <td><a href="{% url 'download_pd_fileset_zip' default_fs.pk %}" class="btn btn-secondary">
+                            <span class="glyphicon glyphicon-download"></span>download
+                        </a></td>
+                    <td>default</td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+
+
+        <!--  Builtin regular Filesets  -->
+        {% if default_fxml_fs %}
+            {% for default_fs in default_fxml_fs %}
+                <tr>
+                    <td>{{default_fs.name}}</td>
+                    <td>{{default_fs.description}}</td>
+                    <td>{{default_fs.uploaded_at}}</td>
+                    <td>{{default_fs.analysis_type}}</td>
+                    <td>{{default_fs.train_val_ratio}}</td>
+                    <td><a href="{% url 'download_fxml_fileset_zip' default_fs.pk %}" class="btn btn-secondary">
                             <span class="glyphicon glyphicon-download"></span>download
                         </a></td>
                     <td>default</td>

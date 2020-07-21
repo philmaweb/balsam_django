@@ -6,4 +6,4 @@ conda env create --name django_breath_dev
 # python 3.6.6 important for installing uwsgi, python>=3.6.7 leads to build failure
 conda activate django_breath_dev
 conda install python==3.6.10 celery==3.1.25 django==2.2 python-graphviz Jinja2==2.10 llvmlite==0.31.0 matplotlib==3.2.1 matplotlib-venn==0.11.5 numpy pandas==1.0.3 psycopg2 PyWavelets==0.5.2 python-magic==0.4.13 scikit-image==0.15 scikit-learn==0.20.3 scipy==1.2.1 seaborn==0.10 statsmodels==0.11.1 xlrd==1.1.0 django-celery=3.2.2 sqlparse=0.3.0 uwsgi
-pip install django-crispy-forms==1.7.2 jobtastic==2.1.1 psutil==3.4.2 django-cookie-consent==0.2.0 breathpy==0.8.3
+pip install django-crispy-forms==1.7.2 jobtastic==2.1.1 psutil==3.4.2 django-cookie-consent==0.2.0 breathpy==0.8.4

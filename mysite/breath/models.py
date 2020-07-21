@@ -515,14 +515,15 @@ class UserDatasetZipFileValidator(object):
     def check_gcms_raw(self, zip_handle):
         # check for raw gcms files
         gcms_raw = filter_mzml_or_mzxml_filenames(dir="", filelis=zip_handle.namelist())
-        if gcms_raw and len(gcms_raw) < self.min_number_of_gcms_raw:
+        if len(gcms_raw) < self.min_number_of_gcms_raw:
             raise ValidationError(f"{self.error_messages['min_number_of_gcms_raw']} {len(gcms_raw)}.")
+
 
     def check_validity_analysis_type(self, zip_handle, analysis_type):
         # do sanity checks for different analysis types - not called automatically
         if analysis_type == AnalysisType.FEATURE_MATRIX:
             self.check_for_feature_matrix(zip_handle=zip_handle)
-        elif analysis_type == AnalysisType.RAW_GC_MS:
+        elif analysis_type == AnalysisType.RAW_MZML:
             self.check_gcms_raw(zip_handle=zip_handle)
         elif analysis_type == AnalysisType.RAW_MCC_IMS:
             # check ims files
@@ -530,7 +531,7 @@ class UserDatasetZipFileValidator(object):
             if len(csv_filenames) < self.min_number_of_ims_csv:
                 raise ValidationError(f"{self.error_messages['min_number_of_ims_csv']} {len(csv_filenames)}.")
         else:
-            raise ValidationError("AnalysisType not implemented.")
+            raise ValidationError("AnalysisType not supported.")
 
 
 class FileSet(models.Model):
@@ -608,7 +609,7 @@ class AnalysisType(Enum):
     Defines UserDefinedFileset analysis types
     """
     RAW_MCC_IMS = "RAW_MCC_IMS"
-    RAW_GC_MS = "RAW_GC_MS"
+    RAW_MZML = "RAW_MZML"
     FEATURE_MATRIX = "FEATURE_MATRIX"
 
     @classmethod
@@ -2079,13 +2080,15 @@ class GCMSPredefinedPeakDetectionFileSet(models.Model):
     class_label_dict = JSONField(default=dict)
     upload = models.FileField(upload_to='archives/predefined_featurexml/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    analysis_type = models.CharField(max_length=255)  # AnalysisType
+    train_val_ratio = models.FloatField()
     is_train = models.BooleanField()
 
     def get_class_label_processed_id_dict(self):
         return OrderedDict(sorted(self.class_label_processed_id_dict.items(), key=lambda t: t[0]))
 
     def __str__(self):
-        return f"{self.name} - {self.description} - {self.created_at.strftime('%Y.%m.%d %H:%M')}"
+        return f"{self.name} - {self.description} - {self.uploaded_at.strftime('%Y.%m.%d %H:%M')}"
 
     def delete(self, *args, **kwargs):
         full_media_path = os.path.join(settings.MEDIA_ROOT, self.upload.name)
@@ -2183,7 +2186,6 @@ def construct_user_defined_fileset_from_zip(zippath, name:str, description:str, 
     :param zippath:
     :return:
     """
-    # TODO test it
     base_fn = Path(zippath).name
 
     with ZipFile(zippath) as origin_zip:
@@ -2247,7 +2249,6 @@ def construct_user_defined_feature_matrices_from_zip(zippath, name:str, descript
     """
     Create two `UserDefinedFeatureMatrix` - one training and one validation set
     """
-    # FIXME
     class_label_dict, fm = MccImsAnalysis.read_in_custom_feature_matrix(zip_path=zippath)#self.upload.path)
 
     # coerce peak detection method
@@ -2350,9 +2351,7 @@ def create_gcms_pdr_from_zip(archive_path, pdm):
         candidate_lis = filter_feature_xmls(dir="", name_list=archive.namelist())
 
         for fn in candidate_lis:
-            # unzip to upload dir via buffer to let django handle file colisions
-            # import ipdb; ipdb.set_trace()
-            # buffer = StringIO(archive.read(fn))
+            # unzip to upload dir via buffer to let django handle file collisions
 
             # feature_xml_outname = f"{fn}{get_default_feature_xml_storage_suffix(suffix_prefix=GCMSPeakDetectionMethod.ISOTOPEWAVELET.name)}"
             # feature_xml_name = f"{fn}{get_default_feature_xml_storage_suffix()}"

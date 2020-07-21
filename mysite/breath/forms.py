@@ -1154,11 +1154,11 @@ class CustomDetectionAnalysisForm(forms.Form):
 class UploadUserDatasetForm(forms.Form):
     """
     Handle creation process of dataset for website from zipfile with class labels, feature matrix or raw files
-    2GB limit for user file - raw files can be huge even if compressed
+    4GB limit for user file - raw files can be huge even if compressed
     """
     user_file = forms.FileField(
         required=True,
-        validators=[UserDatasetZipFileValidator(max_size=2000 * 1024 * 1024)],
+        validators=[UserDatasetZipFileValidator(max_size=4000 * 1024 * 1024)],
         label="Your Dataset",
         help_text="\nPlease upload a zip archive containing the class_labels file, raw files or feature matrix for further analysis. Also see <a href=/documentation#file_formats>documentation#file_formats</a>.",
     )
@@ -1167,7 +1167,7 @@ class UploadUserDatasetForm(forms.Form):
         required=True,
         label="Type of dataset",
         choices=AnalysisType.choices(),
-        initial=AnalysisType.FEATURE_MATRIX.name,
+        initial=AnalysisType.RAW_MCC_IMS.name,
     )
 
     train_validation_fraction = forms.FloatField(
@@ -1188,7 +1188,6 @@ class UploadUserDatasetForm(forms.Form):
         self.helper.add_input(Submit('submit', 'Upload'))
 
     def clean(self):
-        # TODO test me
         #  can also raise validation errors from here - doesnt need to be in Validator with access to single field
         # need user context for validation - so create model in view
 
@@ -1224,7 +1223,7 @@ class UploadUserDatasetForm(forms.Form):
 
         # do additional validation dependent on AnalysisType
             ####### RAW_MCC_IMS
-            print(self.cleaned_data['analysis_type'])
+            # print(self.cleaned_data['analysis_type'])
             if self.cleaned_data['analysis_type'] == AnalysisType.RAW_MCC_IMS.name:
                 validator = UserDatasetZipFileValidator(check_layer_file=True)
                 validator.check_validity_analysis_type(zip_handle=tmp_archvie, analysis_type=AnalysisType.RAW_MCC_IMS)
@@ -1248,10 +1247,10 @@ class UploadUserDatasetForm(forms.Form):
                 validator.check_validity_analysis_type(zip_handle=tmp_archvie, analysis_type=AnalysisType.FEATURE_MATRIX)
 
             ####### RAW_GC_MS
-            if self.cleaned_data['analysis_type'] == AnalysisType.RAW_GC_MS.name:
+            if self.cleaned_data['analysis_type'] == AnalysisType.RAW_MZML.name:
                 validator = UserDatasetZipFileValidator()
                 validator.check_validity_analysis_type(zip_handle=tmp_archvie,
-                                                       analysis_type=AnalysisType.RAW_GC_MS)
+                                                       analysis_type=AnalysisType.RAW_MZML)
 
             # After checks pass filepath to cleaned data
             self.cleaned_data['zip_file_path'] = zip_file_path
@@ -1371,35 +1370,33 @@ class CustomPredictionForm(forms.Form):
         return self.cleaned_data
 
 
-
 class GCMSAnalysisForm(forms.Form):
     """
     Needs to handle upload of zipfile with class labels and featureXMLS and mzML mzXML files
     """
-
-    user_file = forms.FileField(
-        required=False,
-        # 1GB max size - very lenient
-        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=True,
-                check_layer_file=False, check_peak_detection_results=False,
-                check_gcms_raw=True, check_gcms_feautures=True,
-                )],
-        label="Your raw/centroided mzML files or featureXML files.",
-        help_text="\nPlease upload a zip archive containing your raw/centroided mzML files or featureXML files for further analysis.",
-    )
-
     based_on_predefined_sets = forms.ModelChoiceField(
         required=False,
         label="Available Datasets",
         queryset=GCMSPredefinedPeakDetectionFileSet.objects.filter(is_train=True)
     )
 
+    based_on_user_sets = forms.ModelChoiceField(
+        required=False,
+        label="Your Datasets",
+        queryset=UserDefinedFileset.objects.none(),
+    )
+
     # added feature matrix support
     # added example files
 
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user_id=None, **kwargs):
         super(GCMSAnalysisForm, self).__init__(*args, **kwargs)
+        user = User.objects.get(pk=user_id)
+
+        user_queryset = UserDefinedFileset.objects.filter(user=user, is_train=True).order_by('name')
+        self.fields['based_on_user_sets'].queryset = user_queryset
+
         self.helper = FormHelper()
 
         # pdm_name = "CUSTOM"
@@ -1412,29 +1409,14 @@ class GCMSAnalysisForm(forms.Form):
         # from .models import ClassPredictionFileSet
         from .models import construct_custom_peak_detection_fileset_from_zip, construct_custom_feature_matrix_from_zip
         from.models import CustomPeakDetectionFileSet
-
         based_on_predefined_sets = self.cleaned_data.get('based_on_predefined_sets')
+        user_file = self.cleaned_data.get('based_on_user_sets')
 
-        my_user_file = self.cleaned_data.get('user_file')
-        if my_user_file:
-            # GCMSPeakDetectionFileSet - contains pdr and class label file
-            # ids of pdr saved in custom construct
+        if user_file:
+            # zip_file = user_file.upload
+            # self.cleaned_data['zip_file_path'] = zip_file.path
+            zip_file_path = user_file.upload.path
 
-            # Store to disk
-            if isinstance(my_user_file, InMemoryUploadedFile):
-
-                filename = my_user_file.name  # received file name
-                file_obj = my_user_file
-
-                target_dir = tempfile.gettempdir()
-                target_path = Path(target_dir) / filename
-                with open(target_path, 'wb+') as destination:
-                    for chunk in file_obj.chunks():
-                        destination.write(chunk)
-
-                zip_file_path = Path(target_path)
-            else:
-                zip_file_path = my_user_file.temporary_file_path()
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, GCMSPredefinedPeakDetectionFileSet):
             zip_file_path = based_on_predefined_sets.upload.path
         else:
@@ -1449,7 +1431,7 @@ class GCMSAnalysisForm(forms.Form):
             # need to raise error
             raise ValidationError(msg)
 
-        # check whether feature matrix, featureXML or rawFiles - priority to feature matrix
+        # check whether feature matrix, featureXML or rawFiles - priority to feature matrix, then featureXML
         if GCMSAnalysisForm.does_contain_feature_matrix(zip_file_path):
             feature_matrix_id = construct_custom_feature_matrix_from_zip(zip_file_path, is_train=True)
             self.cleaned_data['feature_matrix_id'] = feature_matrix_id
@@ -1550,7 +1532,7 @@ class GCMSProcessingForm(forms.Form):
     peak_detection = forms.TypedChoiceField(
         help_text="Select one peak detection method. For centroided data chose centroided, for raw choose isotopewavelet.\n" +
                   "For high-resolution data run your own feature extraction and upload your .featureXML files at " +
-                  "<a href='../select_dataset_gcms'>selectdataset_gcms</a>.", # not ideal but works in comparison to reverse
+                  "<a href='../select_dataset_gcms'>select_dataset_gcms</a>.", # not ideal but works in comparison to reverse
         label="GCMS Peak Detection - must match your data",
         choices=zip(PEAK_DETECTION_OPTIONS, PEAK_DETECTION_OPTIONS),
         coerce=lambda x: GCMSProcessingForm._coerce_peak_detection(x),
@@ -1821,20 +1803,23 @@ class GCMSPredictionForm(forms.Form):
     based_on_predefined_sets = forms.ModelChoiceField(
         required=False,
         label="Predefined Datasets",
-        queryset=GCMSPredefinedPeakDetectionFileSet.objects.all()
+        queryset=GCMSPredefinedPeakDetectionFileSet.objects.filter(is_train=False)
     )
 
-
-    user_file = forms.FileField(
+    based_on_user_sets = forms.ModelChoiceField(
         required=False,
-        validators=[ZipFileValidator(max_size=2000 * 1024 * 1024, check_class_labels=True, check_layer_file=False, check_gcms_feautures=True, check_gcms_raw=True)],
-        label="Your raw/centroided mzML files or featureXML files.",
-        help_text="\nPlease upload a zip archive containing your raw/centroided mzML files or featureXML files for further analysis.",
+        label="Your Datasets",
+        queryset=UserDefinedFileset.objects.none(),
     )
 
     # ORDER of the arguments is extremely important - can't have a default value before *args - will fail misarbly without error
-    def __init__(self, web_prediction_model_key, *args, **kwargs):
+    def __init__(self, web_prediction_model_key, *args, user_id=None, **kwargs):
         super(GCMSPredictionForm, self).__init__(*args, **kwargs)
+
+        user = User.objects.get(pk=user_id)
+        user_queryset = UserDefinedFileset.objects.filter(user=user, is_train=False).order_by('name')
+        self.fields['based_on_user_sets'].queryset = user_queryset
+
         self.helper = FormHelper()
 
         # need to get possible prediction models -> keys in predictionModel
@@ -1850,7 +1835,7 @@ class GCMSPredictionForm(forms.Form):
         self.helper.layout = Layout(
                 Field('based_on_performance_measure'),
                 Field('based_on_predefined_sets'),
-                Field('user_file'),
+                Field('based_on_user_sets'),
             )
 
         self.helper.form_method = 'post'
@@ -1861,26 +1846,12 @@ class GCMSPredictionForm(forms.Form):
 
         based_on_predefined_sets = self.cleaned_data.get('based_on_predefined_sets')
 
-        my_user_file = self.cleaned_data.get('user_file')
-        if my_user_file:
-            # GCMSPeakDetectionFileSet - contains pdr and class label file
-            # ids of pdr saved in custom construct
+        # if both fields given, chose user submit
+        user_file = self.cleaned_data.get('based_on_user_sets')
 
-            # Store to disk
-            if isinstance(my_user_file, InMemoryUploadedFile):
+        if user_file:
+            zip_file_path = user_file.upload.path
 
-                filename = my_user_file.name  # received file name
-                file_obj = my_user_file
-                target_dir = tempfile.gettempdir()
-
-                target_path = Path(target_dir) / filename
-                with open(target_path, 'wb+') as destination:
-                    for chunk in file_obj.chunks():
-                        destination.write(chunk)
-
-                zip_file_path = Path(target_path)
-            else:
-                zip_file_path = my_user_file.temporary_file_path()
         elif based_on_predefined_sets and isinstance(based_on_predefined_sets, GCMSPredefinedPeakDetectionFileSet):
             zip_file_path = based_on_predefined_sets.upload.path
         else:

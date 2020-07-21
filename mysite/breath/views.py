@@ -46,6 +46,7 @@ from .models import (
                     RocPlotModel, BoxPlotModel, FeatureMatrix,
                     WebPredictionModel, ClassPredictionFileSet, PredictionResult, StatisticsModel, DecisionTreePlotModel,
                     AnalysisType, UserDefinedFileset, UserDefinedFeatureMatrix, PredefinedFileset, PredefinedCustomPeakDetectionFileSet,
+                    GCMSPredefinedPeakDetectionFileSet,
                     construct_user_defined_feature_matrices_from_zip, construct_user_defined_fileset_from_zip,
                     )
 
@@ -198,15 +199,21 @@ def list_datasets(request, user):
 
     # TODO prep filesets for context
     # date format:  {self.created_at.strftime('%Y.%m.%d %H:%M')}
-    user_fms = UserDefinedFeatureMatrix.objects.filter(user=user)
-    user_fss = UserDefinedFileset.objects.filter(user=user)
-    default_fss = list(PredefinedFileset.objects.all())
-    default_fss.extend(PredefinedCustomPeakDetectionFileSet.objects.all())
+    user_fms = UserDefinedFeatureMatrix.objects.filter(user=user).order_by('created_at').reverse()
+    user_fss = UserDefinedFileset.objects.filter(user=user).order_by('uploaded_at').reverse()
+    # TODO sort by date - intermed object
+
+    default_fss = PredefinedFileset.objects.all()
+    default_pd_fs = PredefinedCustomPeakDetectionFileSet.objects.all()
+    default_fxml_fs = GCMSPredefinedPeakDetectionFileSet.objects.all()
+
     # FIXME extend with available GCMSPredefinedPeakDetectionFileSet
 
     context['user_fms'] = user_fms
     context['user_fss'] = user_fss
     context['default_fss'] = default_fss
+    context['default_pd_fs'] = default_pd_fs
+    context['default_fxml_fs'] = default_fxml_fs
 
     return render(request, template_name, context)
 
@@ -229,24 +236,24 @@ def upload_dataset(request, user):
         context['form'] = upload_form
         return render(request, template_name, context)
     if upload_form.is_valid():
-        print(upload_form.cleaned_data.get('zip_file_path'))
+        # print(upload_form.cleaned_data.get('zip_file_path'))
         # model needs user - so is created in view instead of in form
         # distinguish on user selection
-        if upload_form.cleaned_data['analysis_type'] == AnalysisType.FEATURE_MATRIX.name:
+        analysis_type = upload_form.cleaned_data['analysis_type']
+        if analysis_type == AnalysisType.FEATURE_MATRIX.name:
             construct_user_defined_feature_matrices_from_zip(
                 zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_fraction'],
                 name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
             )
-        if upload_form.cleaned_data['analysis_type'] == AnalysisType.RAW_MCC_IMS.name:
+        elif analysis_type == AnalysisType.RAW_MCC_IMS.name or analysis_type == AnalysisType.RAW_MZML.name:
             construct_user_defined_fileset_from_zip(
                 zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_fraction'],
                 name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
                 analysis_type=upload_form.cleaned_data['analysis_type'],
             )
-        if upload_form.cleaned_data['analysis_type'] == AnalysisType.RAW_GC_MS:
-            # TODO implement me
-            pass
-        # TODO remove upload_form.cleaned_data['zip_file_path'] - is it temporary or does it persist if InMemory?
+        else:
+            print("Invalid comparison. Skipping set creation.")
+        # upload_form.cleaned_data['zip_file_path'] - is temporary filepath - is cleared when tempdir or InMemory
         return redirect('list_datasets')
     else:
         context['form'] = upload_form
@@ -1620,7 +1627,6 @@ def download_user_fileset_zip(request, fs_id, user):
     if not user == fs.user:
         return HttpResponseForbidden()
 
-    # response = HttpResponse(fs.get_zip.getvalue(), content_type="application/zip")
     response = HttpResponse(fs.get_zip(), content_type="application/zip")
     if fs.is_train:
         train_val_str = "train"
@@ -1636,7 +1642,27 @@ def download_default_fileset_zip(request, fs_id, user):
     fs = get_object_or_404(PredefinedFileset, pk=fs_id)
     # anyone can get the predefined sets
 
-    # response = HttpResponse(fs.get_zip.getvalue(), content_type="application/zip")
     response = HttpResponse(fs.upload.read(), content_type="application/zip")
     response['Content-Disposition'] = f'attachment; filename=default_fileset_{fs_id}.zip'
+    return response
+
+@temp_or_login_required
+def download_pd_fileset_zip(request, fs_id, user):
+    # make sure user is allowed to access the analysis
+    fs = get_object_or_404(PredefinedCustomPeakDetectionFileSet, pk=fs_id)
+    # anyone can get the predefined sets
+
+    response = HttpResponse(fs.upload.read(), content_type="application/zip")
+    response['Content-Disposition'] = f'attachment; filename=default_pd_fileset_{fs_id}.zip'
+    return response
+
+@temp_or_login_required
+def download_fxml_fileset_zip(request, fs_id, user):
+    # make sure user is allowed to access the analysis
+    fs = get_object_or_404(GCMSPredefinedPeakDetectionFileSet, pk=fs_id)
+    # anyone can get the predefined sets
+
+    # response = HttpResponse(fs.get_zip.getvalue(), content_type="application/zip")
+    response = HttpResponse(fs.upload.read(), content_type="application/zip")
+    response['Content-Disposition'] = f'attachment; filename=default_fxml_fileset_{fs_id}.zip'
     return response

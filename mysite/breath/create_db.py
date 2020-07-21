@@ -230,9 +230,17 @@ def add_predefined_gcms_filesets():
         # PredefinedCustomPeakDetectionFileSet.objects
         # try:
         is_train = (i % 2 == 0)
+        if is_train:
+            train_ratio = 0.8
+            description = ""
+        else:
+            train_ratio = 0.2
+
+
         predefined_fileset = GCMSPredefinedPeakDetectionFileSet(name=name, description=description, upload=archive_path,
                                                                 class_label_processed_id_dict=initial_label,
-                                                                is_train=is_train)
+                                                                is_train=is_train, analysis_type="FEATURE_XML",
+                                                                train_val_ratio=train_ratio)
         predefined_fileset.save()
 
         # move to db - create fileField - then get path from that to create pdrs

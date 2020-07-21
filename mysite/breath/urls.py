@@ -155,6 +155,8 @@ urlpatterns = [
     path('download_user_feature_matrix_csv/<int:fm_id>', views.download_user_feature_matrix_csv, name='download_user_feature_matrix_csv'),
     path('download_user_fileset_zip/<int:fs_id>', views.download_user_fileset_zip, name='download_user_fileset_zip'),
     path('download_default_fileset_zip/<int:fs_id>', views.download_default_fileset_zip, name='download_default_fileset_zip'),
+    path('download_pd_fileset_zip/<int:fs_id>', views.download_pd_fileset_zip, name='download_pd_fileset_zip'),
+    path('download_fxml_fileset_zip/<int:fs_id>', views.download_fxml_fileset_zip, name='download_fxml_fileset_zip'),
 
     path('get_plots_as_archive/<int:analysis_id>', views.get_plot_archive, name='get_plots_as_archive'),
 ]
