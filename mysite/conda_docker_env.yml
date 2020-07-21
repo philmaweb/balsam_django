@@ -149,7 +149,7 @@ dependencies:
   - zlib=1.2.11=h516909a_1006
   - zstd=1.4.4=h3b9ef0a_2
   - pip:
-    - breathpy==0.8.2
+    - breathpy==0.8.4
     - django-cookie-consent==0.2.0
     - django-crispy-forms==1.7.2
     - jobtastic==2.1.1

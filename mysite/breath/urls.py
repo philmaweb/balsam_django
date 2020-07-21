@@ -30,95 +30,106 @@ urlpatterns = [
 
     # DATA PROCESSING
 
-    # ex: /breath/run/ # select between mccims and gcms
+    # view available datasets
+    path('list_datasets', views.list_datasets, name='list_datasets'),
+
+    # upload new dataset and split it according to form input
+    path('upload_dataset', views.upload_dataset, name='upload_dataset'),
+
+    # delete user defined fileset
+    path('delete_user_fileset/<int:fs_id>', views.delete_user_fileset, name='delete_user_fileset'),
+
+    # delete user defined feature matrix
+    path('delete_user_feature_matrix/<int:fm_id>', views.delete_user_feature_matrix, name='delete_user_feature_matrix'),
+
+    # ex: /run/ # select between mccims and gcms
     path('run', views.run, name='run'),
 
-    # ex: /breath/run_mcc/ # select between automatic, custom and existing
+    # ex: /run_mcc/ # select between automatic, custom and existing
     path('run_mcc', views.run_mcc, name='run_mcc'),
 
     # MCC URLS
-    # ex: /breath/selectdatasetauto/ --> reviewauto
+    # ex: /selectdatasetauto/ --> reviewauto
     path('selectdatasetauto', views.selectDatasetAuto, name='selectDatasetAuto'),
 
-    # ex: /breath/reviewauto/  --> progressbar --> prediction
+    # ex: /reviewauto/  --> progressbar --> prediction
     path('reviewauto', views.reviewAuto, name='reviewAuto'),
 
-    # ex: /breath/selectdataset/
+    # ex: /selectdataset/
     path('selectdataset', views.selectDataset, name='selectDataset'),
-    # ex: /breath/selectparameters/
+    # ex: /selectparameters/
     path('selectparameters', views.selectParameters, name='selectParameters'),
 
     # path matching the exposed urls by djcelery for status checking
     path('task/<str:task_id>/status/', views.task_status, name='task_status'),
 
-    # ex: /breath/analysis/123
+    # ex: /analysis/123
     path('analysis/<int:analysis_id>', views.analysis, name='analysis'),
 
-    # ex: /breath/analysis_progress/uuid
+    # ex: /analysis_progress/uuid
     path('analysis_progress/<str:task_id>/<int:analysis_id>', views.analysis_progress, name='analysis_progress'),
 
-    # ex: /breath/automatic_analysis_progress/uuid
+    # ex: /automatic_analysis_progress/uuid
     path('automatic_analysis_progress/<str:task_id>/<int:analysis_id>', views.automatic_analysis_progress, name='automatic_analysis_progress'),
 
-    # ex: /breath/evaluate_performance_progress/uuid
+    # ex: /evaluate_performance_progress/uuid
     path('evaluate_performance_progress/<str:task_id>/<int:analysis_id>', views.evaluate_performance_progress,
          name='evaluate_performance_progress'),
 
-    # ex: /breath/prediction_progress/uuid
+    # ex: /prediction_progress/uuid
     path('prediction_progress/<str:task_id>/<int:analysis_id>', views.prediction_progress, name='prediction_progress'),
 
-    # ex: /breath/prediction/17
+    # ex: /prediction/17
     path('prediction/<int:analysis_id>', views.prediction, name='prediction'),
 
-    # ex: /breath/prediction_result/42
+    # ex: /prediction_result/42
     path('prediction_result/<int:analysis_id>', views.prediction_result, name='prediction_result'),
 
-    # ex: /breath/analysis_result/
-    # ex: /breath/review/
+    # ex: /analysis_result/
+    # ex: /review/
     path('review', views.review, name='review'),
 
 
     # GENERAL urls
-    # ex: /breath/results/
+    # ex: /results/
     path('results', views.analysis_list, name='results'),
 
     # download for predictor pickle
     # path('predictor_pickle_download/<int:analysis_id>', views.predictor_pickle_download, name='predictor_pickle_download'),
 
-    # ex: /breath/about/
+    # ex: /about/
     path('about', views.about, name='about'),
 
-    # ex: /breath/documentation/
+    # ex: /documentation/
     path('documentation', views.documentation, name='documentation'),
 
-    # ex: /breath/help/
+    # ex: /help/
     path('help', views.help, name='help'),
 
-    # ex: /breath/analysis_details/3
+    # ex: /analysis_details/3
     path('analysis_details/<int:analysis_id>', views.analysis_details, name='analysis_details'),
 
-
-    # ex: /breath/custom_detection_analysis
+    # ex: /custom_detection_analysis
     path('custom_detection_analysis', views.custom_detection_analysis, name='custom_detection_analysis'),
 
-    # ex: /breath/custom_evaluation_params
+    # ex: /custom_evaluation_params
     path('custom_evaluation_params/<int:analysis_id>/<int:is_using_fm>', views.custom_evaluation_params, name='custom_evaluation_params'),
 
-    # ex: /breath/custom_evaluation_progress/uuid
+    # ex: /custom_evaluation_progress/uuid
     path('custom_evaluation_progress/<str:task_id>/<int:analysis_id>', views.custom_evaluation_progress, name='custom_evaluation_progress'),
 
-    # ex: /breath/custom_prediction_result/42
+    # ex: /custom_prediction_result/42
     path('custom_prediction/<int:analysis_id>', views.custom_prediction, name='custom_prediction'),
 
-    # ex: /breath/custom_prediction_progress/uuid
+    # ex: /custom_prediction_progress/uuid
     path('custom_prediction_progress/<str:task_id>/<int:analysis_id>', views.custom_prediction_progress, name='custom_prediction_progress'),
 
-    # ex: /breath/custom_prediction_result/42
+    # ex: /custom_prediction_result/42
     path('custom_prediction_result/<int:analysis_id>', views.custom_prediction_result, name='custom_prediction_result'),
 
     ###########
     # GCMS urls
-    # ex: /breath/selectdataset_gcms/ # select between raw and existing / featureXML
+    # ex: /selectdataset_gcms/ # select between raw and existing / featureXML
     path('select_dataset_gcms', views_gcms.selectDatasetGCMS, name='select_dataset_gcms'),
 
     # ex: selectparameters_gcms/
@@ -136,8 +147,16 @@ urlpatterns = [
 
     path('gcms_prediction_progress/<str:task_id>/<int:analysis_id>', views_gcms.gcms_prediction_progress, name='gcms_prediction_progress'),
 
+    ###########
+    # Export urls
     path('get_trainings_matrix_as_json/<int:fm_id>', views.get_trainings_matrix_as_json, name='get_trainings_matrix_as_json'),
     path('get_trainings_matrix_as_csv/<int:fm_id>', views.get_trainings_matrix_as_csv, name='get_trainings_matrix_as_csv'),
+
+    path('download_user_feature_matrix_csv/<int:fm_id>', views.download_user_feature_matrix_csv, name='download_user_feature_matrix_csv'),
+    path('download_user_fileset_zip/<int:fs_id>', views.download_user_fileset_zip, name='download_user_fileset_zip'),
+    path('download_default_fileset_zip/<int:fs_id>', views.download_default_fileset_zip, name='download_default_fileset_zip'),
+    path('download_pd_fileset_zip/<int:fs_id>', views.download_pd_fileset_zip, name='download_pd_fileset_zip'),
+    path('download_fxml_fileset_zip/<int:fs_id>', views.download_fxml_fileset_zip, name='download_fxml_fileset_zip'),
 
     path('get_plots_as_archive/<int:analysis_id>', views.get_plot_archive, name='get_plots_as_archive'),
 ]
@@ -149,7 +168,7 @@ if settings.DEBUG:
     # to serve stuff from media
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-    # /breath/test
+    # /test
     #     # import debug_toolbar
     #     # urlpatterns = [
     #     #       url(r'^__debug__/', include(debug_toolbar.urls)),

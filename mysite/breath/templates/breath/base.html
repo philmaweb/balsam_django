@@ -76,6 +76,9 @@
                     <li class="nav-item {% if active_page == 'results' %}active{% endif %}">
                         <a class="nav-link" href="{% url 'results' %}">Results</a>
                     </li>
+                    <li class="nav-item {% if active_page == 'datasets' %}active{% endif %}">
+                        <a class="nav-link" href="{% url 'list_datasets' %}">Datasets</a>
+                    </li>
                     <li class="nav-item dropdown {% if active_page == 'documentation' %}active{% endif %}">
                         <a class="nav-link dropdown-toggle" href="{% url 'documentation' %}" id="dropdown01" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Documentation</a>
                         <div class="dropdown-menu" aria-labelledby="dropdown01">
@@ -166,7 +169,7 @@
 
         <footer class="footer">
             <div class="container">
-              <span class="text-muted">BALSAM Webserver - Version: June 2020 - </span>
+              <span class="text-muted">BALSAM Webserver - Version: July 2020 - </span>
             <span class="text-muted"><a href="{% url 'cookie_consent' %}">Cookie Policy</a></span>
             </div>
         </footer>

@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.utils import timezone
-from .models import WebImsSet, WebCustomSet, MccImsAnalysisWrapper, FileSet
+from .models import WebImsSet, WebCustomSet, MccImsAnalysisWrapper, FileSet, UserDefinedFeatureMatrix, UserDefinedFileset
 
 
 def clean_up(age_limit_days=30):
@@ -13,6 +13,8 @@ def clean_up(age_limit_days=30):
     lis.extend(WebImsSet.objects.filter(uploaded_at__lte=timezone.now()-timedelta(days=age_limit_days)))
     lis.extend(WebCustomSet.objects.filter(uploaded_at__lte=timezone.now() - timedelta(days=age_limit_days)))
     lis.extend(FileSet.objects.filter(created_at__lte=timezone.now() - timedelta(days=age_limit_days)))
+    lis.extend(UserDefinedFeatureMatrix.objects.filter(created_at__lte=timezone.now() - timedelta(days=age_limit_days)))
+    lis.extend(UserDefinedFileset.objects.filter(uploaded_at__lte=timezone.now() - timedelta(days=age_limit_days)))
 
     for ro in lis:
         print(f"Deleting {ro}")
