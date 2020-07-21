@@ -232,7 +232,6 @@ def add_predefined_gcms_filesets():
         is_train = (i % 2 == 0)
         if is_train:
             train_ratio = 0.8
-            description = ""
         else:
             train_ratio = 0.2
 
