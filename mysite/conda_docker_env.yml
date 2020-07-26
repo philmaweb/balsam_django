@@ -21,7 +21,7 @@ dependencies:
   - dask-core=2.14.0=py_0
   - dbus=1.13.6=he372182_0
   - decorator=4.4.2=py_0
-  - django=2.2=py36_0
+  - django=2.2.14
   - expat=2.2.9=he1b5a44_2
   - fontconfig=2.13.1=h86ecdb6_1001
   - freetype=2.10.1=he06d7ca_0

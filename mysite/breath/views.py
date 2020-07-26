@@ -242,12 +242,12 @@ def upload_dataset(request, user):
         analysis_type = upload_form.cleaned_data['analysis_type']
         if analysis_type == AnalysisType.FEATURE_MATRIX.name:
             construct_user_defined_feature_matrices_from_zip(
-                zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_fraction'],
+                zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_ratio'],
                 name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
             )
         elif analysis_type == AnalysisType.RAW_MCC_IMS.name or analysis_type == AnalysisType.RAW_MZML.name:
             construct_user_defined_fileset_from_zip(
-                zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_fraction'],
+                zippath=upload_form.cleaned_data['zip_file_path'], user=user, train_val_ratio=upload_form.cleaned_data['train_validation_ratio'],
                 name=upload_form.cleaned_data['name'], description=upload_form.cleaned_data['description'],
                 analysis_type=upload_form.cleaned_data['analysis_type'],
             )

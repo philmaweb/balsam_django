@@ -876,7 +876,7 @@ class AnalysisForm(forms.Form):
 
     @staticmethod
     def get_decent_split_num(minimum_occurence):
-        # if more than 10 measurements for smallest class - set to 2 fold
+        # if more than 15 measurements for smallest class - set to more than 2 fold
         # --> at least 5 per class
         if minimum_occurence >= 25:  # approx 50 or more samples -> 10 fold cross val
             initial_splits = 10
@@ -1160,7 +1160,7 @@ class UploadUserDatasetForm(forms.Form):
         required=True,
         validators=[UserDatasetZipFileValidator(max_size=4000 * 1024 * 1024)],
         label="Your Dataset",
-        help_text="\nPlease upload a zip archive containing the class_labels file, raw files or feature matrix for further analysis. Also see <a href=/documentation#file_formats>documentation#file_formats</a>.",
+        help_text="\nPlease upload a zip archive containing the class_labels file, raw files or feature matrix for further analysis.",
     )
 
     analysis_type = forms.TypedChoiceField(
@@ -1170,7 +1170,7 @@ class UploadUserDatasetForm(forms.Form):
         initial=AnalysisType.RAW_MCC_IMS.name,
     )
 
-    train_validation_fraction = forms.FloatField(
+    train_validation_ratio = forms.FloatField(
         required=True,
         initial=.80,  # would be approximate to 5 fold split
         min_value=.05,
@@ -1216,7 +1216,7 @@ class UploadUserDatasetForm(forms.Form):
             try:
                 class_label_fn = MccImsAnalysis.guess_class_label_extension("", tmp_archvie.namelist())
                 class_label_dict = MccImsAnalysis.parse_class_labels_from_ZipFile(tmp_archvie, class_label_fn)
-                split_labels_ratio(class_label_dict, self.cleaned_data['train_validation_fraction'])
+                split_labels_ratio(class_label_dict, self.cleaned_data['train_validation_ratio'])
 
             except ValueError:
                 raise ValidationError("Bad train to validation fraction. Need at least one sample per class, both in training and validation set.")
@@ -1531,8 +1531,7 @@ class GCMSProcessingForm(forms.Form):
     # BASIC OPTIONS
     peak_detection = forms.TypedChoiceField(
         help_text="Select one peak detection method. For centroided data chose centroided, for raw choose isotopewavelet.\n" +
-                  "For high-resolution data run your own feature extraction and upload your .featureXML files at " +
-                  "<a href='../select_dataset_gcms'>select_dataset_gcms</a>.", # not ideal but works in comparison to reverse
+                  "For high-resolution data run your own feature extraction and upload your feature_matrix.csv files.",
         label="GCMS Peak Detection - must match your data",
         choices=zip(PEAK_DETECTION_OPTIONS, PEAK_DETECTION_OPTIONS),
         coerce=lambda x: GCMSProcessingForm._coerce_peak_detection(x),
