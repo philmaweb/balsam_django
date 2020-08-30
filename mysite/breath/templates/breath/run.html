@@ -1,14 +1,14 @@
 {% extends 'breath/base.html' %}
 
 {% block content %}
-    <h2>Select between MCC/IMS and GC/MS + LC/MS pipelines.</h2>
+    <h2>Select between MCC-IMS and GC-MS + LC-MS pipelines.</h2>
     <div>
         <a class="btn btn-success btn-lg route_button"href="{% url 'run_mcc' %}" role="button">MCC/IMS pipeline</a>
         <a class="btn btn-info btn-lg route_button" href="{% url 'select_dataset_gcms' %}" role="button">(Experimental) GC/MS + LC/MS pipeline</a>
     </div>
     <br>
     <div>
-        <p>Use the <span class="badge badge-success "><strong>MCC/IMS Pipeline</strong></span> to process MCC/IMS files.</p>
-        <p>Use the <span class="badge badge-info "><strong>GC/MS + LC/MS Pipeline</strong></span> to process GC/MS and LC/MS files.</p>
+        <p>Use the <span class="badge badge-success "><strong>MCC-IMS Pipeline</strong></span> to process MCC-IMS files.</p>
+        <p>Use the <span class="badge badge-info "><strong>GC-MS + LC-MS Pipeline</strong></span> to process GC-MS and LC-MS files.</p>
     </div>
 {% endblock %}
