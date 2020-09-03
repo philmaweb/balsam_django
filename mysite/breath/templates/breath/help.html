@@ -7,9 +7,9 @@
 		<h2>Tutorial</h2>
 		<h3>General</h3>
 			<div>
-				<p>The BALSAM platform can be used for supervised feature extraction and visualization of Multi Capillary Column - Ion Mobility Spectrometry (MCC-IMS) data using a graphical user interface.</p>
+				<p>The BALSAM web-platform can be used for supervised feature extraction and visualization of Multi Capillary Column - Ion Mobility Spectrometry (MCC-IMS) data using a graphical user interface.</p>
 
-				<p>The features or peak-intensities are then used to build a prediction model. Using the same feature extraction methods unknown measurements can be classified in the final step. In this automated or guided approach we provide a range of preprocessing and evaluation methods to select from.
+				<p>The features or peak-intensities are then used to build a prediction model. Using the same feature extraction methods, measurements can be classified in the final step. In this automated or guided approach we provide a range of preprocessing and evaluation methods to select from.
 
 				Furthermore we provide a set of example datasets to showcase the implementation.</p>
 			</div>
@@ -17,17 +17,17 @@
 	<div class="col-sm-4">
 		<h4>Screencast</h4>
 		<div class="embed-responsive embed-responsive-16by9">
-			<iframe width="560" height="315" src="https://www.youtube.com/embed/wqvogzOyNDE" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+			<iframe width="560" height="315" src="https://www.youtube.com/embed/Mkaz4TNmN_Q" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 		</div>
 	</div>
 	<div class="col-sm-12">
 		<h3>FAQ</h3>
 		<div>
 			<h4>Question: Where can I download my data?</h4>
-			<h4>Answer: You can list all of your analysis runs under `/results`. When following one of the links to `analysis_details` you can find a button to "Download all plots as zip". Check "Download Info" to download your feature matrices from training and prediction. Raw data cannot be downloaded.</h4>
+			<h4>Answer: You can list all of your analysis runs under <a href="{% url 'results' %}">Results</a>. When following one of the links to `Analysis_details` you can find a button to "Download all plots as zip". Check "Download Info" to download your feature matrices from training and prediction. Raw data can be downloaded under `Datasets`.</h4>
 
 			<h4>Question: When are my samples deleted?</h4>
-			<h4>Answer: They are automatically deleted after 30 days. If you can't or don't want to upload your data to our webserver, you can deploy balsam on your own machine using our public docker container at <a href="https://hub.docker.com/repository/docker/philmaweb/balsam_docker" target="_blank">DockerHub</a>.</h4>
+			<h4>Answer: They are automatically deleted after 30 days. If you can't or don't want to upload your data to our webserver, you can deploy BALSAM on your own machine using our public docker container from <a href="https://hub.docker.com/repository/docker/philmaweb/balsam_docker" target="_blank">DockerHub</a>.</h4>
 
 			<h4>Question: The decision tree doesn't classify the samples correctly. It has leave nodes that have several classes. How can I fix this?</h4>
 			<h4>Answer: Increase the allowed depth limit of the decision tree (set max_depth >5). Make sure that min_samples_leaf = 1.</h4>
@@ -35,7 +35,8 @@
 		<h3>Step-by-Step Guide</h3>
 		<div>
 			This is the step-by-step guide how to use BALSAM. It will guide you through the different route options.
-
+			Several sample datasets are available. If you want to use your own, you need to upload and split it into a training and validation fraction under <a href="{% url 'datasets' %}">datasets</a>.
+			When uploading your own dataset make sure to follow the requirements documented under <a href="{% url 'documentation' %}#datasets" target="_blank">documentation#datasets</a>.
 			<div class="d-flex justify-content-center tutorial_image_holder">
 				<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/run.png" alt="Select Analysis route" class="col-sm-8">
 			</div>
@@ -43,7 +44,7 @@
 			Decide between the <span class="badge badge-success "><strong>Automatic</strong></span>, <span class="badge badge-info "><strong>Custom</strong></span> and <span class="badge badge-secondary "><strong>Existing Results</strong></span> routes.
 			The first two approaches <span class="badge badge-success "><strong>Automatic</strong></span> and <span class="badge badge-info "><strong>Custom</strong></span> will produce the same outcome:
 			A prediction model based on the preprocessing strategy and the features (detected peaks) resulting from this strategy.
-			The third approach <span class="badge badge-secondary "><strong>Existing Results</strong></span> allows one to upload a feature matrix as input or re-use results from a previous run. This also allows the analysis of GC-MS measurements by performing the preprocessing and peak detection locally and using the platform to select and reduce features and build predictive models using cross-validation.
+			The third approach <span class="badge badge-secondary "><strong>Existing Results</strong></span> allows one to upload a feature matrix as input and in that way re-use results from a previous run. This also allows the analysis of GC-MS measurements by performing the preprocessing and peak detection locally and using the platform to select and reduce features and build predictive models using cross-validation.
 		</div>
 		<br>
 
@@ -52,16 +53,15 @@
 		<div class="col-sm-12">
 
 			<h4>Datasets</h4>
-				<p>Select between the available datasets or upload your own zip-archive. When uploading your own dataset make sure to follow the requirements docuemted under <a href="{% url 'documentation' %}#datasets" target="_blank">Datasets</a>.</p>
-				<p>Select the <span class="badge">Large Candy Train</span> dataset - which is a dataset with 33 raw MCC-IMS measurements from 2 classes - menthol and citrus candies.
+				<p>Select between the sample datasets or use your own.</p>
+				<p>Select the <span class="badge">Candy Training</span> dataset - which is a dataset with 33 raw MCC-IMS measurements from 2 classes - menthol and citrus candies.
 					Then press Submit</p>
 			<h4>Review</h4>
 			<p>Click on the <span class="badge">Dataset Info heading</span> to collapse or expand the sections.
-				Under <span class="badge">Evaluation Info</span> you can find the parameters used for the evaluation of you method.
+				Under <span class="badge">Evaluation Info</span> you can find the parameters used for the evaluation of your method.
 			</p>
 			<p>The automatic approach will evaluate a set of PeakDetection options for you and select the best performing strategy on the dataset based on the classifier performance (ROC AUC).</p>
-			<p>The server will run all available Peak-Detection methods and Evaluation Options for you when clicking continue.</p>
-
+			<p>When clicking continue, the server will run all available Peak-Detection methods and Evaluation Options for you.</p>
 				<div class="d-flex justify-content-center tutorial_image_holder">
 					<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_review.png" alt="Review Parameters" class="col-sm-8">
 				</div>
@@ -96,7 +96,7 @@
 				<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_prediction_features.png" alt="Features Random Forest" class="col-sm-8">
 			</div>
 			<p>
-				Scrolling further down we can see the estimated performance of the classifier, with Accuracy, Precision, Recall Area under Curve and F1-Score.
+				Scrolling further down we can see the estimated performance of the classifier, with Accuracy, Precision, Recall, Area under Curve and F1-Score.
 				<div class="d-flex justify-content-center tutorial_image_holder">
 					<img src="https://raw.githubusercontent.com/philmaweb/BreathAnalysis.github.io/master/tutorial/automatic_prediction_performance.png" alt="Estimated Performance Cross Validation" class="col-sm-8">
 				</div>
@@ -153,8 +153,7 @@
 
 				<p>Similarly to the automatic approach, but one can select between default parameters or adjust them to your preference.</p>
 				<p>After applying the preprocessing steps to your dataset you can further customize the evaluation of
-					the prediction model, specifying the folds in the cross validation and whether to compute p_values
-					for each feature or to use a random forest classifier to extract feature importances.</p>
+					the prediction model, specifying the folds in the cross validation, the number of features used for training and tune the decision tree.</p>
 				<p>See the <a href="{% url 'documentation' %}#preprocessing_techniques" target="_blank">Preprocessing Techniques</a>
 					or refer to the publication for a detailed explanation of the available methods.</p>
 		</div>
@@ -167,14 +166,14 @@
 			</p>
 			<p>The major difference of this approach is, that one can use previous results or a feature matrix
 				(see <a href="{% url 'documentation' %}#feature_matrix">documentation#feature_matrix</a> for reference)
-				as input to the analysis. This allows a much more rapid analysis process by skipping the computationaly
+				as input to the analysis. This allows a much more rapid analysis process by skipping the computationally
 				expensive pre-processing steps.</p>
 		</div>
 
 		<h3>Results</h3>
 
 			<p>All of your analysis runs are listed under <a href="{% url 'results' %}">results</a> -
-				click on the the Details link to find the plots, data and prediction results associated with your analysis.
+				click on the the "Details" link to find the plots, data and prediction results associated with your analysis.
 				Furthermore you're able to download the results from here.</p>
 	</div>
 </div>
