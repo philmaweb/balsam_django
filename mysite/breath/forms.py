@@ -1158,7 +1158,7 @@ class UploadUserDatasetForm(forms.Form):
     """
     user_file = forms.FileField(
         required=True,
-        validators=[UserDatasetZipFileValidator(max_size=4000 * 1024 * 1024)],
+        validators=[UserDatasetZipFileValidator(max_size=5000 * 1024 * 1024)],
         label="Your Dataset",
         help_text="\nPlease upload a zip archive containing the class_labels file, raw files or feature matrix for further analysis.",
     )
