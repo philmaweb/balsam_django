@@ -1154,7 +1154,7 @@ class CustomDetectionAnalysisForm(forms.Form):
 class UploadUserDatasetForm(forms.Form):
     """
     Handle creation process of dataset for website from zipfile with class labels, feature matrix or raw files
-    4GB limit for user file - raw files can be huge even if compressed
+    5GB limit for user file - raw files can be huge even if compressed in an archive.
     """
     user_file = forms.FileField(
         required=True,
