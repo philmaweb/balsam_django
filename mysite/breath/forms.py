@@ -1178,8 +1178,8 @@ class UploadUserDatasetForm(forms.Form):
         label="Dataset training fraction",
         help_text="This value specifies the fraction of the dataset used for training. I.e. when choosing 0.8, the dataset is split such that 80% of samples are used for training and 20% for validation."
     )
-    name = forms.CharField(max_length=30, required=True)
-    description = forms.CharField(max_length=30, required=False, help_text='Optional')
+    name = forms.CharField(max_length=50, required=True)
+    description = forms.CharField(max_length=200, required=False, help_text='Optional')
 
     def __init__(self, *args, **kwargs):
         super(UploadUserDatasetForm, self).__init__(*args, **kwargs)
