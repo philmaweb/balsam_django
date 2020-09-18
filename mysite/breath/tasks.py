@@ -405,15 +405,18 @@ class ParallelPreprocessingTask(JobtasticTask):
         # res = celery_chain(
             # starts the parallel processing task and returns the raw_ids, processed_ids and pdr_ids
         prep_res = group(preprocess_measurement.s(raw_file_id, preprocessing_options) for raw_file_id in raw_file_ids)()
-        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after 30 minutes of preprocessing
+        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after some time
         # and important to run celery with -Ofair option - workers kept stalling
+
+        # Instead we could use https://docs.celeryproject.org/en/3.1/userguide/workers.html#time-limits for timelimit
         while not prep_res.successful():
 
             self.update_progress(prep_res.completed_count(), total_progress)
             time.sleep(1)
 
-            if (time.time() - t0) > 120*60.:
-                raise ValueError("Running for over 2 hours in pre-processing. Something is off.")
+            if (time.time() - t0) > 1440*60.:
+                prep_res.revoke(terminate=True)
+                raise ValueError("Running for over 24 hours in pre-processing. Something is off.")
 
         self.update_progress(number_of_measurements, total_progress)
         raw_id_processed_id_pdr_id_tuples = prep_res.join()
@@ -447,16 +450,16 @@ class ParallelPreprocessingTask(JobtasticTask):
         plot_group = celery_chain(
             group(heatmap_plot.s(pf_id, analysis_id, user_id) for pf_id in processed_file_ids),
             group(classwise_heatmap_plots.s(analysis_id=analysis_id, user_id=user_id), cluster_overlay_plots.s(analysis_id=analysis_id)))()
-        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after 30 minutes of preprocessing
+        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after some time
         # and important to run celery with -Ofair option - workers kept stalling
         while not plot_group.successful():
 
             self.update_progress(number_of_measurements + 2 + prep_res.completed_count(), total_progress)
             time.sleep(1)
 
-            if (time.time() - t0) > 120*60.:
-                raise ValueError("Running for over 2 hours in pre-processing. Something is off.")
-
+            if (time.time() - t0) > 1440*60.:
+                prep_res.revoke(terminate=True)
+                raise ValueError("Running for over 24 hours in pre-processing. Something is off.")
 
         # for i, pf_id in enumerate(processed_file_ids):
         #     heatmap_plot(pf_id, analysis_id, user_id)
@@ -1133,15 +1136,16 @@ class ParallelAutomaticPreprocessingEvaluationTask(JobtasticTask):
 
         # starts the parallel processing task and returns the raw_ids, processed_ids and pdr_ids
         prep_res = group(preprocess_measurement.s(raw_file_id, preprocessing_options) for raw_file_id in raw_file_ids)()
-        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after 30 minutes of preprocessing
+        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after some time
         # and important to run celery with -Ofair option - workers kept stalling
         while not prep_res.successful():
 
             self.update_progress(prep_res.completed_count(), total_progress)
             time.sleep(1)
 
-            if (time.time() - t0) > 120 * 60.:
-                raise ValueError("Running for over 2 hours in pre-processing. Something is off.")
+            if (time.time() - t0) > 1440*60.:
+                prep_res.revoke(terminate=True)
+                raise ValueError("Running for over 24 hours in pre-processing. Something is off.")
 
         self.update_progress(number_of_measurements, total_progress)
 
@@ -1176,8 +1180,9 @@ class ParallelAutomaticPreprocessingEvaluationTask(JobtasticTask):
             self.update_progress(number_of_measurements + 2 + prep_res.completed_count(), total_progress)
             time.sleep(1)
 
-            if (time.time() - t0) > 120 * 60.:
-                raise ValueError("Running for over 2 hours in pre-processing. Something is off.")
+            if (time.time() - t0) > 1440*60.:
+                prep_res.revoke(terminate=True)
+                raise ValueError("Running for over 24 hours in pre-processing. Something is off.")
 
 
         # for i, pf_id in enumerate(processed_file_ids):
@@ -1796,15 +1801,16 @@ class GCMSParallelPreprocessingTask(JobtasticTask):
         # starts the parallel processing task and returns the raw_ids and pdr_ids
         prep_res = group(process_gcms_measurement.s(raw_file_id, preprocessing_options) for raw_file_id in raw_file_ids)()
 
-        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after 2 hours of preprocessing
+        # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after 24 hours of preprocessing
         # and important to run celery with -Ofair option - workers kept stalling
         while not prep_res.successful():
 
             self.update_progress(prep_res.completed_count(), total_progress)
             time.sleep(1)
 
-            if (time.time() - t0) > 120*60:
-                raise ValueError("Running for over 2 hours in pre-processing. Something is off.")
+            if (time.time() - t0) > 1440*60.:
+                prep_res.revoke(terminate=True)
+                raise ValueError("Running for over 24 hours in pre-processing. Something is off.")
 
         self.update_progress(number_of_measurements, total_progress)
         pdr_ids = prep_res.join()
@@ -2146,14 +2152,14 @@ class GCMSPredictClassTask(JobtasticTask):
                 prep_res = group(
                     process_gcms_measurement.s(raw_file_id, preprocessing_options) for raw_file_id in raw_file_ids)()
 
-                # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after 2 hours of preprocessing
+                # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after 24 hours of preprocessing
                 # and important to run celery with -Ofair option - workers kept stalling
                 while not prep_res.successful():
 
                     self.update_progress(prep_res.completed_count(), total_progress)
                     time.sleep(1)
 
-                    if (time.time() - t0) > 120 * 60:
+                    if (time.time() - t0) > 1440 * 60:
                         raise ValueError("Running for over 2 hours in pre-processing. Something is off.")
 
                 self.update_progress(number_of_measurements, total_progress)
