@@ -447,11 +447,12 @@ class ParallelPreprocessingTask(JobtasticTask):
         # cluster_ids, overlay_ids = cluster_overlay_plots.s(analysis_id)()
         print("processed_file_ids", processed_file_ids)
 
+        # structured this way to make progress trackable
         plot_group = celery_chain(
             group(heatmap_plot.s(pf_id, analysis_id, user_id) for pf_id in processed_file_ids),
             group(classwise_heatmap_plots.s(analysis_id=analysis_id, user_id=user_id), cluster_overlay_plots.s(analysis_id=analysis_id)))()
         # dangerous - in case we have too many ParallelPreprocessing tasks started at once - we will wait forever - so we fail after some time
-        # and important to run celery with -Ofair option - workers kept stalling
+        # and important to run celery with -Ofair option - initially workers kept stalling
         while not plot_group.successful():
 
             self.update_progress(number_of_measurements + 2 + prep_res.completed_count(), total_progress)
@@ -460,18 +461,6 @@ class ParallelPreprocessingTask(JobtasticTask):
             if (time.time() - t0) > 1440*60.:
                 prep_res.revoke(terminate=True)
                 raise ValueError("Running for over 24 hours in pre-processing. Something is off.")
-
-        # for i, pf_id in enumerate(processed_file_ids):
-        #     heatmap_plot(pf_id, analysis_id, user_id)
-        # self.update_progress(2 * number_of_measurements + 2 , total_progress)
-
-        # make a classwise heatmap
-        # classwise_heatmap_plots(analysis_id=analysis_id, user_id=user_id)
-
-        # heatmap_plots(analysis_id=analysis_id)
-        # self.update_progress(2 * number_of_measurements, total_progress)
-        # update_progress.s(self, 4, total_progress),
-        # cluster_overlay_plots(analysis_id=analysis_id)
 
         self.update_progress(total_progress, total_progress)
         return analysis_id
@@ -2007,7 +1996,7 @@ class GCMSAnalysisEvaluationTask(JobtasticTask):
                     based_on_peak_detection_method_name=pdm_name,
                     based_on_performance_measure_name=eval_method_name,
                 )
-                plotModel.save()  #
+                plotModel.save()
 
         # prebuild empty stats_dict for FDR - stats are only computed in random forest and cross validation
         # mcc_ims_analysis.analysis_result.pvalues_df
