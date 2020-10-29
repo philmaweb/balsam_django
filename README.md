@@ -29,4 +29,4 @@ If you run into difficulties using BALSAM, please open an issue at our [GitHub](
 ## Citation
 
 BALSAM has been published. Please cite:
-> [Philipp Weber, Josch Konstantin Pauling, Markus List, and Jan Baumbach. "Balsam—an interactive online platform for breath analysis, visualization and classification." Metabolites 10, no. 10 (2020): 393.]
+> [Philipp Weber, Josch Konstantin Pauling, Markus List, and Jan Baumbach. "Balsam—an interactive online platform for breath analysis, visualization and classification." Metabolites 10, no. 10 (2020): 393.](https://doi.org/10.3390/metabo10100393)
