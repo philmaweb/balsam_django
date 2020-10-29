@@ -25,3 +25,8 @@ See
 
 ## Contact
 If you run into difficulties using BALSAM, please open an issue at our [GitHub](https://github.com/philmaweb/balsam_django) repository. Alternatively you can write an email to [Philipp Weber](mailto:pweber@imada.sdu.dk?subject=[BALSAM]%20BALSAM).
+
+## Citation
+
+BALSAM has been published. Please cite:
+> [Philipp Weber, Josch Konstantin Pauling, Markus List, and Jan Baumbach. "Balsam—an interactive online platform for breath analysis, visualization and classification." Metabolites 10, no. 10 (2020): 393.]
